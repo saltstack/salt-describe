@@ -8,11 +8,40 @@ Module for building state file
 
 import logging
 import os
+import os.path
 import yaml
 
 import salt.utils.files
+import salt.daemons.masterapi
+
 
 log = logging.getLogger(__name__)
+
+
+def _generate_init(minion=None, env="base"):
+    """
+    Generate the init.sls for the minion or minions
+    """
+    state_file_root = __salt__["config.get"]("file_roots:base")[0]
+
+    minion_state_root = "{}/{}".format(state_file_root, minion)
+    if not os.path.exists(minion_state_root):
+        os.mkdir(minion_state_root)
+
+    minion_init_file = "{}/init.sls".format(minion_state_root)
+
+    include_files = []
+    for file in os.listdir(minion_state_root):
+        if file.endswith(".sls") and file != "init.sls":
+            _file = os.path.splitext(file)[0]
+            include_files.append("moriarty.{}".format(_file))
+
+    state_contents = {"include": include_files}
+
+    with salt.utils.files.fopen(minion_init_file, "w") as fp_:
+        fp_.write(yaml.dump(state_contents))
+
+    return True
 
 
 def pkg(tgt, tgt_type="glob", include_version=True, single_state=True):
@@ -63,6 +92,8 @@ def pkg(tgt, tgt_type="glob", include_version=True, single_state=True):
 
         with salt.utils.files.fopen(minion_state_file, "w") as fp_:
             fp_.write(state)
+
+        _generate_init(minion)
 
     return True
 
@@ -131,7 +162,6 @@ def file(tgt, paths, tgt_type="glob"):
         with salt.utils.files.fopen(minion_state_file, "w") as fp_:
             fp_.write(state)
 
-    for minion in list(file_contents.keys()):
         for path in file_contents[minion]:
 
             path_file = "{}/files/{}".format(minion_state_root, path)
@@ -140,6 +170,8 @@ def file(tgt, paths, tgt_type="glob"):
 
             with salt.utils.files.fopen(path_file, "w") as fp_:
                 fp_.write(file_contents[minion][path])
+
+        _generate_init(minion)
 
     return True
 
@@ -156,16 +188,27 @@ def top(tgt, tgt_type="glob", env="base"):
 
     """
 
+    # Gather minions based on tgt and tgt_type arguments
+    masterapi = salt.daemons.masterapi.RemoteFuncs(__opts__)
+    minions = masterapi.local.gather_minions(tgt, tgt_type)
+
     state_file_root = __salt__["config.get"]("file_roots:base")[0]
     top_file = "{}/top.sls".format(state_file_root)
 
+    top_file_dict = {}
     with salt.utils.files.fopen(top_file, "r") as fp_:
-        top_file_dict = yaml.load(fp_.read())
+        top_file_contents = yaml.load(fp_.read())
 
-        #for 
-        #if env in top_file_dict:
-        #    if 
+    if env not in top_file_dict:
+        top_file_dict[env] = {}
 
-        breakpoint()
+    for minion in minions:
+        if minion not in top_file_dict[env]:
+            top_file_dict[env][minion] = ["moriarty"]
+        else:
+            top_file_dict[env][minion].append("moriarty")
+
+    with salt.utils.files.fopen(top_file, "w") as fp_:
+        fp_.write(yaml.dump(top_file_dict))
 
     return True
