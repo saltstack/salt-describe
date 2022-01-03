@@ -22,6 +22,10 @@ __virtualname__ = "describe"
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    return __virtualname__
+
+
 def _generate_init(minion=None, env="base"):
     """
     Generate the init.sls for the minion or minions
