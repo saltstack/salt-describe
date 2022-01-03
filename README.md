@@ -30,7 +30,10 @@ To get started with your new project:
     python -m nox -e docs && (cd docs/_build/html; python -m webbrowser localhost:8000; python -m http.server; cd -)
 
     # Run the pkg describe function
-    salt-run salt_describe.pkg <minion-tgt>
+    salt-run describe.pkg <minion-tgt>
 
     # Run the file describe function
-    salt-run salt_describe.file <minion-tgt> <file name>
+    salt-run describe.file <minion-tgt> <file name>
+
+    # Generate the top file for the minion target based off of previously generated SLS files.
+    salt-run salt_describe.top <minion-tgt>
