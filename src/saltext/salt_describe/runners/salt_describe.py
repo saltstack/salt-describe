@@ -6,10 +6,12 @@ Module for building state file
 """
 
 
+import inspect
 import logging
 import os
 import os.path
 import pathlib
+import sys
 import yaml
 
 import salt.utils.files
@@ -60,7 +62,7 @@ def pkg(tgt, tgt_type="glob", include_version=True, single_state=True):
 
     .. code-block:: bash
 
-        salt '*' salt_describe.pkg
+        salt-run describe.pkg minion-tgt
 
     """
 
@@ -115,8 +117,7 @@ def file(tgt, paths, tgt_type="glob"):
 
     .. code-block:: bash
 
-        salt '*' salt_describe.file /etc/salt/minion
-
+        salt-run describe.file minion-tgt /etc/salt/minion
     """
 
     if isinstance(paths, str):
@@ -184,6 +185,36 @@ def file(tgt, paths, tgt_type="glob"):
     return True
 
 
+def all(tgt, exclude=None, *args, **kwargs):
+    """
+    Run all describe methods against target
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.all minion-tgt
+    """
+    all_methods = ["pkg", "file"]
+    for method in all_methods:
+        call_kwargs = kwargs.copy()
+        get_args = inspect.getfullargspec(getattr(sys.modules[__name__],
+                                                   method)).args
+        for arg in args:
+            if arg not in get_args:
+                args.remove(arg)
+
+        for kwarg in kwargs:
+            if kwarg not in get_args:
+                call_kwargs.pop(kwarg)
+
+        try:
+            ret = __salt__["describe.{}".format(method)](tgt, *args, **call_kwargs)
+        except TypeError as err:
+            log.error(err.args[0])
+    return True
+
+
 def top(tgt, tgt_type="glob", env="base"):
     """
     Add the generated states to top.sls
@@ -192,8 +223,7 @@ def top(tgt, tgt_type="glob", env="base"):
 
     .. code-block:: bash
 
-        salt '*' salt_describe.top
-
+        salt-run describe.top minion-tgt
     """
 
     # Gather minions based on tgt and tgt_type arguments
