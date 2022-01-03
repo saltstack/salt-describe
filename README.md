@@ -29,5 +29,8 @@ To get started with your new project:
     # Build the docs, serve, and view in your web browser:
     python -m nox -e docs && (cd docs/_build/html; python -m webbrowser localhost:8000; python -m http.server; cd -)
 
-    # Run the example function
-    salt-call --local salt-describe.example_function text="Happy Hacking!"
+    # Run the pkg describe function
+    salt-run salt_describe.pkg <minion-tgt>
+
+    # Run the file describe function
+    salt-run salt_describe.file <minion-tgt> <file name>
