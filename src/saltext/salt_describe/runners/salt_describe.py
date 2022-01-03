@@ -9,10 +9,14 @@ Module for building state file
 import logging
 import os
 import os.path
+import pathlib
 import yaml
 
 import salt.utils.files
 import salt.daemons.masterapi
+
+
+__virtualname__ = "describe"
 
 
 log = logging.getLogger(__name__)
@@ -192,21 +196,30 @@ def top(tgt, tgt_type="glob", env="base"):
     masterapi = salt.daemons.masterapi.RemoteFuncs(__opts__)
     minions = masterapi.local.gather_minions(tgt, tgt_type)
 
-    state_file_root = __salt__["config.get"]("file_roots:base")[0]
-    top_file = "{}/top.sls".format(state_file_root)
+    state_file_root = pathlib.Path(__salt__["config.get"]("file_roots:base")[0])
+    top_file = state_file_root / "top.sls"
+
+    if not top_file.is_file():
+        top_file.touch()
 
     top_file_dict = {}
+
     with salt.utils.files.fopen(top_file, "r") as fp_:
-        top_file_contents = yaml.load(fp_.read())
+        top_file_contents = yaml.safe_load(fp_.read())
 
     if env not in top_file_dict:
         top_file_dict[env] = {}
 
     for minion in minions:
+        add_top = []
+        for files in os.listdir(str(state_file_root / minion)):
+            if files.endswith(".sls") and not files.startswith("init"):
+                add_top.append(minion + "." + files.split(".sls")[0])
+
         if minion not in top_file_dict[env]:
-            top_file_dict[env][minion] = ["moriarty"]
+            top_file_dict[env][minion] = add_top
         else:
-            top_file_dict[env][minion].append("moriarty")
+            top_file_dict[env][minion].append(add_top)
 
     with salt.utils.files.fopen(top_file, "w") as fp_:
         fp_.write(yaml.dump(top_file_dict))
