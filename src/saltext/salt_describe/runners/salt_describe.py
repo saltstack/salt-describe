@@ -185,7 +185,7 @@ def file(tgt, paths, tgt_type="glob"):
     return True
 
 
-def all(tgt, exclude=None, *args, **kwargs):
+def all(tgt, top=True, exclude=None, *args, **kwargs):
     """
     Run all describe methods against target
 
@@ -197,6 +197,8 @@ def all(tgt, exclude=None, *args, **kwargs):
     """
     all_methods = ["pkg", "file"]
     for method in all_methods:
+        if method == exclude:
+            continue
         call_kwargs = kwargs.copy()
         get_args = inspect.getfullargspec(getattr(sys.modules[__name__],
                                                    method)).args
@@ -212,6 +214,10 @@ def all(tgt, exclude=None, *args, **kwargs):
             ret = __salt__["describe.{}".format(method)](tgt, *args, **call_kwargs)
         except TypeError as err:
             log.error(err.args[0])
+
+    # generate the top file
+    if top:
+        __salt__["describe.top"](tgt)
     return True
 
 
@@ -225,7 +231,6 @@ def top(tgt, tgt_type="glob", env="base"):
 
         salt-run describe.top minion-tgt
     """
-
     # Gather minions based on tgt and tgt_type arguments
     masterapi = salt.daemons.masterapi.RemoteFuncs(__opts__)
     minions = masterapi.local.gather_minions(tgt, tgt_type)
