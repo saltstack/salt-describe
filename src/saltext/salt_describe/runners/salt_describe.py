@@ -185,6 +185,76 @@ def file(tgt, paths, tgt_type="glob"):
     return True
 
 
+def service(tgt, tgt_type="glob"):
+    """
+    Gather enabled and disabled services on minions and build a state file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.service minion-tgt
+
+    """
+
+    enabled_services = __salt__["salt.execute"](
+        tgt,
+        "service.get_enabled",
+        tgt_type=tgt_type,
+    )
+
+    disabled_services = __salt__["salt.execute"](
+        tgt,
+        "service.get_disabled",
+        tgt_type=tgt_type,
+    )
+
+    service_status = __salt__["salt.execute"](
+        tgt,
+        "service.status",
+        "*",
+        tgt_type=tgt_type,
+    )
+
+    for minion in list(service_status.keys()):
+        _services = service_status[minion]
+
+        state_contents = {}
+        for service, status in _services.items():
+            state_name = "{}".format(service)
+            _enabled = service in enabled_services.get(minion)
+            _disabled = service in disabled_services.get(minion)
+
+            if status:
+                service_function = "service.running"
+            else:
+                service_function = "service.dead"
+
+            if _enabled:
+                state_contents[state_name] = {service_function: [{"enable": True}]}
+            elif _disabled:
+                state_contents[state_name] = {service_function: [{"enable": False}]}
+            else:
+                state_contents[state_name] = {service_function: []}
+
+        state = yaml.dump(state_contents)
+
+        state_file_root = __salt__["config.get"]("file_roots:base")[0]
+
+        minion_state_root = "{}/{}".format(state_file_root, minion)
+        if not os.path.exists(minion_state_root):
+            os.mkdir(minion_state_root)
+
+        minion_state_file = "{}/services.sls".format(minion_state_root)
+
+        with salt.utils.files.fopen(minion_state_file, "w") as fp_:
+            fp_.write(state)
+
+        _generate_init(minion)
+
+    return True
+
+
 def all(tgt, top=True, exclude=None, *args, **kwargs):
     """
     Run all describe methods against target
