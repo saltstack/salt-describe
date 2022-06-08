@@ -356,6 +356,54 @@ def timezone(tgt, tgt_type="glob"):
     return True
 
 
+def pip(tgt, tgt_type="glob", bin_env=None):
+    """
+    Gather installed pip libraries and build a state file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.pip minion-tgt
+
+    """
+
+    ret = __salt__["salt.execute"](
+        tgt,
+        "pip.freeze",
+        tgt_type=tgt_type,
+        bin_env=bin_env,
+    )
+
+    state_name = "installed_pip_libraries"
+    state_fun = "pip.installed"
+
+    for minion in list(ret.keys()):
+        minion_pip_list = ret[minion]
+        state_contents = {
+            state_name: {
+                state_fun: [{"pkgs": minion_pip_list}],
+            },
+        }
+
+        state = yaml.dump(state_contents)
+
+        state_file_root = __salt__["config.get"]("file_roots:base")[0]
+
+        minion_state_root = pathlib.Path(state_file_root, minion)
+        if not os.path.exists(str(minion_state_root)):
+            os.mkdir(str(minion_state_root))
+
+        minion_state_file = pathlib.Path(minion_state_root, "pip.sls")
+
+        with salt.utils.files.fopen(str(minion_state_file), "w") as fp_:
+            fp_.write(state)
+
+        _generate_init(minion)
+
+    return True
+
+
 def all(tgt, top=True, exclude=None, *args, **kwargs):
     """
     Run all describe methods against target
