@@ -226,7 +226,7 @@ def user(tgt, require_groups=False, tgt_type="glob"):
                     tgt_type="glob"
                     )[minion]
 
-            usernam = user["name"]
+            username = user["name"]
             payload = [
                     {"uid": user["uid"]},
                     {"gid": user["gid"]},
