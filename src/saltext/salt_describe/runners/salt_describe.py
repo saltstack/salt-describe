@@ -66,6 +66,20 @@ def _generate_sls(minion, state, sls_name="default"):
     _generate_init(minion)
     return True
 
+def _generate_pillars(minion, pillar, sls_name="default"):
+    pillar_file_root = pathlib.Path(__salt__["config.get"]("pillar_roots:base")[0])
+
+    minion_pillar_root = pillar_file_root / minion
+    if not os.path.exists(minion_pillar_root):
+        os.mkdir(minion_pillar_root)
+
+    minion_pillar_file = minion_pillar_root / f"{sls_name}.sls"
+
+    with salt.utils.files.fopen(minion_pillar_file, "w") as fp_:
+        fp_.write(pillar)
+
+    return True
+
 
 def pkg(tgt, tgt_type="glob", include_version=True, single_state=True):
     """
@@ -257,10 +271,13 @@ def user(tgt, require_groups=False, tgt_type="glob"):
 
             state_contents[user["name"]] = {"user.present": payload}
             passwd = shadow["passwd"]
-            pillars["users"].update({user["name"]:f"\"{passwd}\""})
+            if passwd != "*":
+                pillars["users"].update({user["name"]:f"\"{passwd}\""})
 
         state = yaml.dump(state_contents)
         _generate_sls(minion, state, "users")
+        _generate_pillars(minion, pillars, "users")
+    return True
 
 
 def group(tgt, include_members=False, tgt_type="glob"):
@@ -503,3 +520,5 @@ def top(tgt, tgt_type="glob", env="base"):
         fp_.write(yaml.dump(top_file_dict))
 
     return True
+
+def _attach_pillar_top():
