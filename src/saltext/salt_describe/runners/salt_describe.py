@@ -388,18 +388,7 @@ def pip(tgt, tgt_type="glob", bin_env=None):
 
         state = yaml.dump(state_contents)
 
-        state_file_root = __salt__["config.get"]("file_roots:base")[0]
-
-        minion_state_root = pathlib.Path(state_file_root, minion)
-        if not os.path.exists(str(minion_state_root)):
-            os.mkdir(str(minion_state_root))
-
-        minion_state_file = pathlib.Path(minion_state_root, "pip.sls")
-
-        with salt.utils.files.fopen(str(minion_state_file), "w") as fp_:
-            fp_.write(state)
-
-        _generate_init(minion)
+        _generate_sls(minion, state, "pip")
 
     return True
 
