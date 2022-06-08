@@ -306,13 +306,13 @@ def host(tgt, tgt_type="glob"):
 
 def timezone(tgt, tgt_type="glob"):
     """
-    Gather enabled and disabled services on minions and build a state file.
+    Gather the timezone data for minions and generate a state file.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-run describe.service minion-tgt
+        salt-run describe.timezone minion-tgt
 
     """
 
