@@ -194,6 +194,73 @@ def file(tgt, paths, tgt_type="glob"):
     return True
 
 
+def user(tgt, require_groups=False, tgt_type="glob"):
+    """
+    read groups on the minions and build a state file
+    to managed th groups.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.group minion-tgt
+    """
+
+    state_contents = {}
+    if require_groups is True:
+        __salt__["describe.group"](tgt=tgt,include_members=False, tgt_type=tgt_type)
+    
+    users = __salt__["salt.execute"](
+        tgt,
+        "user.getent",
+        tgt_type=tgt_type,
+    )
+
+    pillars = {"users": {}}
+    for minion in list(users.keys()):
+        for user in users[minion]:
+            shadow = __salt__["salt.execute"](
+                    tgt=minion,
+                    "shadow.info",
+                    arg=[user["name"]]
+                    tgt_type="glob"
+                    )[minion]
+
+            payload = [
+                    {"uid": user["uid"]},
+                    {"gid": user["gid"]},
+                    {"allow_uid_change": True},
+                    {"allow_gid_change": True},
+                    {"home": user["home"]},
+                    {"shell": user["shell"]},
+                    {"groups": user["groups"]},
+                    {"createhome": True},
+                    {"password": f"{{ salt[\"pillar.get\"](\"users:{user["name"]}\")}}"},
+                    {"date": shadow["lstchg"]},
+                    {"mindays": shadow["min"]},
+                    {"maxdays": shadow["max"]},
+                    {"inactdays": shadow["inact"]},
+                    {"expire": shadow["expire"]}
+            ]
+            #GECOS
+            if user["fullname"]:
+                payload.append({"fullname": user["fullname"]})
+            if user["homephone"]:
+                payload.append({"homephone": user["homephone"]})
+            if user["other"]:
+                payload.append({"other": user["other"]})
+            if user["roomnumber"]:
+                payload.append({"roomnumber": user["roomnumber"]})
+            if user["workphone"]:
+                payload.append({"workphone": user["workphone"]})
+
+            state_contents[user["name"]] = {"user.present": payload}
+            pillars.users.update({user["name"]:f"\"{shadow["passwd"]}\""})
+
+        state = yaml.dump(state_contents)
+        _generate_sls(minion, state, "users")
+
+
 def group(tgt, include_members=False, tgt_type="glob"):
     """
     read groups on the minions and build a state file
