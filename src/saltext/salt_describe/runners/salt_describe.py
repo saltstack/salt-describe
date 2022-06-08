@@ -561,7 +561,7 @@ def top(tgt, tgt_type="glob", env="base"):
 
 def pillar_top(tgt, tgt_type="glob", env="base"):
     """
-    Add the generated states to top.sls
+    Add the generated pillars to top.sls
 
     CLI Example:
 
@@ -589,7 +589,7 @@ def pillar_top(tgt, tgt_type="glob", env="base"):
 
     for minion in minions:
         add_top = []
-        for files in os.listdir(str(state_file_root / minion)):
+        for files in os.listdir(str(pillar_file_root / minion)):
             if files.endswith(".sls") and not files.startswith("init"):
                 add_top.append(minion + "." + files.split(".sls")[0])
 
