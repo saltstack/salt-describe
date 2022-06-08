@@ -240,6 +240,12 @@ def user(tgt, require_groups=False, tgt_type="glob"):
                     tgt_type="glob"
                     )[minion]
 
+            homeexists = __salt__["salt.execute"](
+                    minion,
+                    "file.directory_exists",
+                    arg=[user["home"]],
+                    tgt_type="glob"
+            )[minion]
             username = user["name"]
             payload = [
                     {"uid": user["uid"]},
@@ -249,7 +255,6 @@ def user(tgt, require_groups=False, tgt_type="glob"):
                     {"home": user["home"]},
                     {"shell": user["shell"]},
                     {"groups": user["groups"]},
-                    {"createhome": True},
                     {"password": f'{{{{ salt["pillar.get"]("users:{username}","*") }}}}'},
                     {"date": shadow["lstchg"]},
                     {"mindays": shadow["min"]},
@@ -257,6 +262,10 @@ def user(tgt, require_groups=False, tgt_type="glob"):
                     {"inactdays": shadow["inact"]},
                     {"expire": shadow["expire"]}
             ]
+            if homeexists:
+                payload.append({"createhome": True})
+            else:
+                payload.append({"createhome": False})
             #GECOS
             if user["fullname"]:
                 payload.append({"fullname": user["fullname"]})
