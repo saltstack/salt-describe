@@ -1,21 +1,18 @@
 """
 Module for building state file
 
-.. versionadded:: Sulfur
+.. versionadded:: 3006
 
 """
-
-
 import inspect
 import logging
-import os
 import os.path
 import pathlib
 import sys
-import yaml
 
-import salt.utils.files
 import salt.daemons.masterapi
+import salt.utils.files
+import yaml
 
 
 __virtualname__ = "describe"
@@ -34,23 +31,39 @@ def _generate_init(minion=None, env="base"):
     """
     state_file_root = __salt__["config.get"]("file_roots:base")[0]
 
-    minion_state_root = "{}/{}".format(state_file_root, minion)
+    minion_state_root = f"{state_file_root}/{minion}"
     if not os.path.exists(minion_state_root):
         os.mkdir(minion_state_root)
 
-    minion_init_file = "{}/init.sls".format(minion_state_root)
+    minion_init_file = f"{minion_state_root}/init.sls"
 
     include_files = []
     for file in os.listdir(minion_state_root):
         if file.endswith(".sls") and file != "init.sls":
             _file = os.path.splitext(file)[0]
-            include_files.append("{}.{}".format(minion,_file))
+            include_files.append(f"{minion}.{_file}")
 
     state_contents = {"include": include_files}
 
     with salt.utils.files.fopen(minion_init_file, "w") as fp_:
         fp_.write(yaml.dump(state_contents))
 
+    return True
+
+
+def _generate_sls(minion, state, sls_name="default"):
+    state_file_root = pathlib.Path(__salt__["config.get"]("file_roots:base")[0])
+
+    minion_state_root = state_file_root / minion
+    if not os.path.exists(minion_state_root):
+        os.mkdir(minion_state_root)
+
+    minion_state_file = minion_state_root / f"{sls_name}.sls"
+
+    with salt.utils.files.fopen(minion_state_file, "w") as fp_:
+        fp_.write(state)
+
+    _generate_init(minion)
     return True
 
 
@@ -85,25 +98,16 @@ def pkg(tgt, tgt_type="glob", include_version=True, single_state=True):
         else:
             state_contents = {}
             for name, version in _pkgs.items():
-                state_name = "install_{}".format(name)
+                state_name = f"install_{name}"
                 if include_version:
-                    state_contents[state_name] = {"pkg.installed": [{"name": name, "version": version}]}
+                    state_contents[state_name] = {
+                        "pkg.installed": [{"name": name, "version": version}]
+                    }
                 else:
                     state_contents[state_name] = {"pkg.installed": [{"name": name}]}
             state = yaml.dump(state_contents)
 
-        state_file_root = __salt__["config.get"]("file_roots:base")[0]
-
-        minion_state_root = "{}/{}".format(state_file_root, minion)
-        if not os.path.exists(minion_state_root):
-            os.mkdir(minion_state_root)
-
-        minion_state_file = "{}/pkgs.sls".format(minion_state_root)
-
-        with salt.utils.files.fopen(minion_state_file, "w") as fp_:
-            fp_.write(state)
-
-        _generate_init(minion)
+        _generate_sls(minion, state, "pkg")
 
     return True
 
@@ -145,35 +149,40 @@ def file(tgt, paths, tgt_type="glob"):
                 file_contents[minion] = {}
             file_contents[minion][path] = _file_contents[minion]
 
-            _file_mode = _file_stats[minion]['mode']
-            _file_user = _file_stats[minion]['user']
-            _file_group = _file_stats[minion]['group']
+            _file_mode = _file_stats[minion]["mode"]
+            _file_user = _file_stats[minion]["user"]
+            _file_group = _file_stats[minion]["group"]
 
             if minion not in state_contents:
                 state_contents[minion] = {}
-            state_contents[minion][path] = {"file.managed": [{"source": "salt://{}/files/{}".format(minion, path),
-                                                      "user": _file_user,
-                                                      "group": _file_group,
-                                                      "mode": _file_mode
-            }]}
+            state_contents[minion][path] = {
+                "file.managed": [
+                    {
+                        "source": f"salt://{minion}/files/{path}",
+                        "user": _file_user,
+                        "group": _file_group,
+                        "mode": _file_mode,
+                    }
+                ]
+            }
 
     for minion in list(state_contents.keys()):
         state = yaml.dump(state_contents[minion])
 
         state_file_root = __salt__["config.get"]("file_roots:base")[0]
 
-        minion_state_root = "{}/{}".format(state_file_root, minion)
+        minion_state_root = f"{state_file_root}/{minion}"
         if not os.path.exists(minion_state_root):
             os.mkdir(minion_state_root)
 
-        minion_state_file = "{}/files.sls".format(minion_state_root)
+        minion_state_file = f"{minion_state_root}/files.sls"
 
         with salt.utils.files.fopen(minion_state_file, "w") as fp_:
             fp_.write(state)
 
         for path in file_contents[minion]:
 
-            path_file = "{}/files/{}".format(minion_state_root, path)
+            path_file = f"{minion_state_root}/files/{path}"
 
             os.makedirs(os.path.dirname(path_file), exist_ok=True)
 
@@ -265,7 +274,7 @@ def service(tgt, tgt_type="glob"):
 
         state_contents = {}
         for service, status in _services.items():
-            state_name = "{}".format(service)
+            state_name = f"{service}"
             _enabled = service in enabled_services.get(minion)
             _disabled = service in disabled_services.get(minion)
 
@@ -282,19 +291,7 @@ def service(tgt, tgt_type="glob"):
                 state_contents[state_name] = {service_function: []}
 
         state = yaml.dump(state_contents)
-
-        state_file_root = __salt__["config.get"]("file_roots:base")[0]
-
-        minion_state_root = "{}/{}".format(state_file_root, minion)
-        if not os.path.exists(minion_state_root):
-            os.mkdir(minion_state_root)
-
-        minion_state_file = "{}/services.sls".format(minion_state_root)
-
-        with salt.utils.files.fopen(minion_state_file, "w") as fp_:
-            fp_.write(state)
-
-        _generate_init(minion)
+        _generate_sls(minion, state, "services")
 
     return True
 
@@ -330,20 +327,10 @@ def host(tgt, tgt_type="glob"):
                 state_contents[sls_id] = {state_func: [{"ip": []}, {"names": []}]}
                 state_contents[sls_id][state_func][0]["ip"] = key
                 state_contents[sls_id][state_func][1]["names"] = value["aliases"]
-                count+=1
+                count += 1
 
         state = yaml.dump(state_contents)
-        state_file_root = __salt__["config.get"]("file_roots:base")[0]
-        minion_state_root = "{}/{}".format(state_file_root, minion)
-        if not os.path.exists(minion_state_root):
-            os.mkdir(minion_state_root)
-
-        minion_state_file = "{}/host.sls".format(minion_state_root)
-
-        with salt.utils.files.fopen(minion_state_file, "w") as fp_:
-            fp_.write(state)
-
-        _generate_init(minion)
+        _generate_sls(minion, state, "host")
 
     return True
 
@@ -406,8 +393,7 @@ def all(tgt, top=True, exclude=None, *args, **kwargs):
         if method == exclude:
             continue
         call_kwargs = kwargs.copy()
-        get_args = inspect.getfullargspec(getattr(sys.modules[__name__],
-                                                   method)).args
+        get_args = inspect.getfullargspec(getattr(sys.modules[__name__], method)).args
         for arg in args:
             if arg not in get_args:
                 args.remove(arg)
@@ -417,7 +403,7 @@ def all(tgt, top=True, exclude=None, *args, **kwargs):
                 call_kwargs.pop(kwarg)
 
         try:
-            ret = __salt__["describe.{}".format(method)](tgt, *args, **call_kwargs)
+            ret = __salt__[f"describe.{method}"](tgt, *args, **call_kwargs)
         except TypeError as err:
             log.error(err.args[0])
 
