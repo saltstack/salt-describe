@@ -7,6 +7,8 @@ import saltext.salt_describe.runners.salt_describe as salt_describe_runner
 import salt.config
 import salt.runners.salt as salt_runner
 
+import yaml
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -51,3 +53,35 @@ def test_pkg():
                 with patch("salt.utils.files.fopen", mock_open()) as open_mock:
                     assert salt_describe_runner.pkg("minion") == True
                     open_mock.assert_has_calls(expected_calls, any_order=True)
+
+
+def test_host(tmp_path):
+    """
+    test describe.host
+    """
+    host_list = {'poc-minion': {'comment-0': ['# Host addresses'],
+                                'comment-1': ['# comment'],
+                                '127.0.0.1': {'aliases': ['localhost']},
+                                '127.0.1.1': {'aliases': ['megan-precision5550']},
+                                '::1': {'aliases': ['localhost', 'ip6-localhost', 'ip6-loopback']},
+                                'ff02::1': {'aliases': ['ip6-allnodes']},
+                                'ff02::2': {'aliases': ['ip6-allrouters']}}}
+
+    expected_content = {'host_file_content_0': {'host.present': [{'ip': '127.0.0.1'}, {'names': ['localhost']}]},
+                        'host_file_content_1': {'host.present': [{'ip': '127.0.1.1'}, {'names': ['megan-precision5550']}]},
+                        'host_file_content_2': {'host.present': [{'ip': '::1'}, {'names': ['localhost', 'ip6-localhost', 'ip6-loopback']}]},
+                        'host_file_content_3': {'host.present': [{'ip': 'ff02::1'}, {'names': ['ip6-allnodes']}]},
+                        'host_file_content_4': {'host.present': [{'ip': 'ff02::2'}, {'names': ['ip6-allrouters']}]}}
+
+    host_file = tmp_path / "poc-minion" / "host.sls"
+    with patch.dict(
+        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=host_list)}
+    ):
+        with patch.dict(
+            salt_describe_runner.__salt__,
+            {"config.get": MagicMock(return_value=[tmp_path])},
+        ):
+            assert salt_describe_runner.host("minion") == True
+            with open(host_file, "r") as fp:
+                content = yaml.safe_load(fp.read())
+                assert content == expected_content
