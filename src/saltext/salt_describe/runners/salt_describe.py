@@ -44,7 +44,7 @@ def _generate_init(minion=None, env="base"):
     for file in os.listdir(minion_state_root):
         if file.endswith(".sls") and file != "init.sls":
             _file = os.path.splitext(file)[0]
-            include_files.append("moriarty.{}".format(_file))
+            include_files.append("{}.{}".format(minion,_file))
 
     state_contents = {"include": include_files}
 
