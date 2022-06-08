@@ -36,4 +36,4 @@ To get started with your new project:
     salt-run describe.file <minion-tgt> <file name>
 
     # Generate the top file for the minion target based off of previously generated SLS files.
-    salt-run salt_describe.top <minion-tgt>
+    salt-run describe.top <minion-tgt>
