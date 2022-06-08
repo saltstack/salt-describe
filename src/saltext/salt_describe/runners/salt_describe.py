@@ -236,7 +236,7 @@ def user(tgt, require_groups=False, tgt_type="glob"):
                     {"shell": user["shell"]},
                     {"groups": user["groups"]},
                     {"createhome": True},
-                    {"password": f'{{{{ salt["pillar.get"]("users:{username}") }}}}'},
+                    {"password": f'{{{{ salt["pillar.get"]("users:{username}","*") }}}}'},
                     {"date": shadow["lstchg"]},
                     {"mindays": shadow["min"]},
                     {"maxdays": shadow["max"]},
