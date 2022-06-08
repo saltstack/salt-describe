@@ -521,4 +521,3 @@ def top(tgt, tgt_type="glob", env="base"):
 
     return True
 
-def _attach_pillar_top():
