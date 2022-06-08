@@ -32,8 +32,8 @@ def _generate_pillar_init(minion=None, env="base"):
     pillar_file_root = __salt__["config.get"]("pillar_roots:base")[0]
 
     minion_pillar_root = f"{pillar_file_root}/{minion}"
-    if not os.path.exists(minion_state_root):
-        os.mkdir(minion_state_root)
+    if not os.path.exists(minion_pillar_root):
+        os.mkdir(minion_pillar_root)
 
     minion_init_file = f"{minion_pillar_root}/init.sls"
 
