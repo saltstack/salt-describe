@@ -275,6 +275,7 @@ def user(tgt, require_groups=False, tgt_type="glob"):
                 pillars["users"].update({user["name"]:f"\"{passwd}\""})
 
         state = yaml.dump(state_contents)
+        pillars = yaml.dump(pillars)
         _generate_sls(minion, state, "users")
         _generate_pillars(minion, pillars, "users")
     return True
