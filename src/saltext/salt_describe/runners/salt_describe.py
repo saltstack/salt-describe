@@ -257,7 +257,7 @@ def user(tgt, require_groups=False, tgt_type="glob"):
 
             state_contents[user["name"]] = {"user.present": payload}
             passwd = shadow["passwd"]
-            pillars.users.update({user["name"]:f"\"{passwd}\""})
+            pillars["users"].update({user["name"]:f"\"{passwd}\""})
 
         state = yaml.dump(state_contents)
         _generate_sls(minion, state, "users")
