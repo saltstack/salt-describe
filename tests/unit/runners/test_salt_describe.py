@@ -1,4 +1,5 @@
 import logging
+import pathlib
 from unittest.mock import call
 from unittest.mock import MagicMock
 from unittest.mock import mock_open
@@ -54,7 +55,6 @@ def test_pkg():
                     open_mock.assert_has_calls(expected_calls, any_order=True)
 
 
-
 def test_group():
     group_getent = {
         "minion": [
@@ -64,9 +64,7 @@ def test_group():
     }
 
     expected_calls = [
-        call().write(
-            "adm:\n  group.present:\n  - gid: 4\nroot:\n  group.present:\n  - gid: 0\n"
-        ),
+        call().write("adm:\n  group.present:\n  - gid: 4\nroot:\n  group.present:\n  - gid: 0\n"),
         call().write("include:\n- minion.groups"),
     ]
 
@@ -82,7 +80,7 @@ def test_group():
                     assert salt_describe_runner.group("minion") == True
                     open_mock.assert_has_calls(expected_calls, any_order=True)
 
-                    
+
 def test_host(tmp_path):
     """
     test describe.host
@@ -132,9 +130,9 @@ def test_timezone(tmp_path):
     """
     test describe.host
     """
-    timezone_list = {'poc-minion': 'America/Los_Angeles'}
+    timezone_list = {"poc-minion": "America/Los_Angeles"}
 
-    expected_content = {'America/Los_Angeles': {'timezone.system': []}}
+    expected_content = {"America/Los_Angeles": {"timezone.system": []}}
 
     host_file = tmp_path / "poc-minion" / "timezone.sls"
     with patch.dict(
@@ -145,6 +143,42 @@ def test_timezone(tmp_path):
             {"config.get": MagicMock(return_value=[tmp_path])},
         ):
             assert salt_describe_runner.host("minion") == True
-            with open(host_file, "r") as fp:
+            with open(host_file) as fp:
                 content = yaml.safe_load(fp.read())
                 assert content == expected_content
+
+
+def test_pip(tmp_path):
+    pip_list = {
+        "minion": [
+            "requests==0.1.2",
+            "salt==3004.1",
+            "argcomplete==2.3.4-5",
+        ],
+    }
+
+    expected_sls_write = yaml.dump(
+        {
+            "installed_pip_libraries": {"pip.installed": [{"pkgs": pip_list["minion"]}]},
+        }
+    )
+    expected_include_write = yaml.dump({"include": ["minion.pip"]})
+    expected_calls = [
+        call().write(expected_sls_write),
+        call().write(expected_include_write),
+    ]
+    with patch.dict(
+        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=pip_list)}
+    ):
+        tmp_state_root = pathlib.Path(tmp_path, "srv", "salt")
+        tmp_state_root.mkdir(parents=True, exist_ok=True)
+        unused_dir = pathlib.Path(tmp_path, "srv", "spm", "salt")
+        unused_dir.mkdir(parents=True, exist_ok=True)
+        with patch.dict(
+            salt_describe_runner.__salt__,
+            {"config.get": MagicMock(return_value=[str(tmp_state_root), str(unused_dir)])},
+        ):
+            with patch("os.listdir", return_value=["pip.sls"]):
+                with patch("salt.utils.files.fopen", mock_open()) as open_mock:
+                    assert salt_describe_runner.pip("minion") == True
+                    open_mock.assert_has_calls(expected_calls, any_order=True)
