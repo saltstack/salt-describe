@@ -582,7 +582,7 @@ def pillar_top(tgt, tgt_type="glob", env="base"):
     top_file_dict = {}
 
     with salt.utils.files.fopen(top_file, "r") as fp_:
-        top_file_contents = yaml.safe_load(fp_.read())
+        top_file_dict = yaml.safe_load(fp_.read())
 
     if env not in top_file_dict:
         top_file_dict[env] = {}
