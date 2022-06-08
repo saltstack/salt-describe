@@ -275,6 +275,7 @@ def user(tgt, require_groups=False, tgt_type="glob"):
             )[minion]
             username = user["name"]
             payload = [
+                    {"name": username},
                     {"uid": user["uid"]},
                     {"gid": user["gid"]},
                     {"allow_uid_change": True},
@@ -305,7 +306,7 @@ def user(tgt, require_groups=False, tgt_type="glob"):
             if user["workphone"]:
                 payload.append({"workphone": user["workphone"]})
 
-            state_contents[user["name"]] = {"user.present": payload}
+            state_contents[f"user-{username}"] = {"user.present": payload}
             passwd = shadow["passwd"]
             if passwd != "*":
                 pillars["users"].update({user["name"]:f"{passwd}"})
@@ -337,10 +338,11 @@ def group(tgt, include_members=False, tgt_type="glob"):
     state_contents = {}
     for minion in list(groups.keys()):
         for group in groups[minion]:
-            payload = [{"gid": group["gid"]}]
+            groupname = group["name"]
+            payload = [{"name": groupname},{"gid": group["gid"]}]
             if include_members is True:
                 payload.append({"members": group["members"]})
-            state_contents[group["name"]] = {"group.present": payload}
+            state_contents[f"group-{groupname}"] = {"group.present": payload}
 
         state = yaml.dump(state_contents)
 
