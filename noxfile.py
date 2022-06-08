@@ -6,7 +6,6 @@ import pathlib
 import shutil
 import sys
 import tempfile
-
 from pathlib import Path
 
 import nox
@@ -150,10 +149,10 @@ def tests(session):
     args = [
         "--rootdir",
         str(REPO_ROOT),
-        "--log-file={}".format(RUNTESTS_LOGFILE.relative_to(REPO_ROOT)),
+        f"--log-file={RUNTESTS_LOGFILE.relative_to(REPO_ROOT)}",
         "--log-file-level=debug",
         "--show-capture=no",
-        "--junitxml={}".format(JUNIT_REPORT),
+        f"--junitxml={JUNIT_REPORT}",
         "--showlocals",
         "-ra",
         "-s",
@@ -170,7 +169,7 @@ def tests(session):
         for arg in session.posargs:
             if arg.startswith("-"):
                 continue
-            if arg.startswith("tests{}".format(os.sep)):
+            if arg.startswith(f"tests{os.sep}"):
                 break
             try:
                 pathlib.Path(arg).resolve().relative_to(REPO_ROOT / "tests")
@@ -208,7 +207,9 @@ def tests(session):
             "--include=tests/*",
         )
         try:
-            session.run("coverage", "report", "--show-missing", "--include=src/saltext/salt_describe/*")
+            session.run(
+                "coverage", "report", "--show-missing", "--include=src/saltext/salt_describe/*"
+            )
             # If you also want to display the code coverage report on the CLI
             # for the tests, comment the call above and uncomment the line below
             # session.run(
@@ -254,7 +255,7 @@ def _lint(session, rcfile, flags, paths, tee_output=True):
         session.run("pylint", "--version")
         pylint_report_path = os.environ.get("PYLINT_REPORT")
 
-    cmd_args = ["pylint", "--rcfile={}".format(rcfile)] + list(flags) + list(paths)
+    cmd_args = ["pylint", f"--rcfile={rcfile}"] + list(flags) + list(paths)
 
     src_path = str(REPO_ROOT / "src")
     python_path_env_var = os.environ.get("PYTHONPATH") or None
@@ -326,8 +327,8 @@ def lint(session):
     """
     Run PyLint against the code and the test suite. Set PYLINT_REPORT to a path to capture output.
     """
-    session.notify("lint-code-{}".format(session.python))
-    session.notify("lint-tests-{}".format(session.python))
+    session.notify(f"lint-code-{session.python}")
+    session.notify(f"lint-tests-{session.python}")
 
 
 @nox.session(python="3", name="lint-code")
