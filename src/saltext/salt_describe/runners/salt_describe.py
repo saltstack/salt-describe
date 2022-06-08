@@ -25,6 +25,32 @@ def __virtual__():
     return __virtualname__
 
 
+def _generate_pillar_init(minion=None, env="base"):
+    """
+    Generate the init.sls for the minion or minions
+    """
+    pillar_file_root = __salt__["config.get"]("pillar_roots:base")[0]
+
+    minion_pillar_root = f"{pillar_file_root}/{minion}"
+    if not os.path.exists(minion_state_root):
+        os.mkdir(minion_state_root)
+
+    minion_init_file = f"{minion_pillar_root}/init.sls"
+
+    include_files = []
+    for file in os.listdir(minion_pillar_root):
+        if file.endswith(".sls") and file != "init.sls":
+            _file = os.path.splitext(file)[0]
+            include_files.append(f"{minion}.{_file}")
+
+    pillar_contents = {"include": include_files}
+
+    with salt.utils.files.fopen(minion_init_file, "w") as fp_:
+        fp_.write(yaml.dump(pillar_contents))
+
+    return True
+
+
 def _generate_init(minion=None, env="base"):
     """
     Generate the init.sls for the minion or minions
@@ -78,6 +104,7 @@ def _generate_pillars(minion, pillar, sls_name="default"):
     with salt.utils.files.fopen(minion_pillar_file, "w") as fp_:
         fp_.write(pillar)
 
+    _generate_pillar_init(minion)
     return True
 
 
@@ -503,6 +530,51 @@ def top(tgt, tgt_type="glob", env="base"):
 
     state_file_root = pathlib.Path(__salt__["config.get"]("file_roots:base")[0])
     top_file = state_file_root / "top.sls"
+
+    if not top_file.is_file():
+        top_file.touch()
+
+    top_file_dict = {}
+
+    with salt.utils.files.fopen(top_file, "r") as fp_:
+        top_file_contents = yaml.safe_load(fp_.read())
+
+    if env not in top_file_dict:
+        top_file_dict[env] = {}
+
+    for minion in minions:
+        add_top = []
+        for files in os.listdir(str(state_file_root / minion)):
+            if files.endswith(".sls") and not files.startswith("init"):
+                add_top.append(minion + "." + files.split(".sls")[0])
+
+        if minion not in top_file_dict[env]:
+            top_file_dict[env][minion] = add_top
+        else:
+            top_file_dict[env][minion].append(add_top)
+
+    with salt.utils.files.fopen(top_file, "w") as fp_:
+        fp_.write(yaml.dump(top_file_dict))
+
+    return True
+
+
+def pillar_top(tgt, tgt_type="glob", env="base"):
+    """
+    Add the generated states to top.sls
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.top minion-tgt
+    """
+    # Gather minions based on tgt and tgt_type arguments
+    masterapi = salt.daemons.masterapi.RemoteFuncs(__opts__)
+    minions = masterapi.local.gather_minions(tgt, tgt_type)
+
+    pillar_file_root = pathlib.Path(__salt__["config.get"]("pillar_roots:base")[0])
+    top_file = pillar_file_root / "top.sls"
 
     if not top_file.is_file():
         top_file.touch()
