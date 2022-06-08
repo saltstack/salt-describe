@@ -220,12 +220,13 @@ def user(tgt, require_groups=False, tgt_type="glob"):
     for minion in list(users.keys()):
         for user in users[minion]:
             shadow = __salt__["salt.execute"](
-                    tgt=minion,
+                    minion,
                     "shadow.info",
-                    arg=[user["name"]]
+                    arg=[user["name"]],
                     tgt_type="glob"
                     )[minion]
 
+            usernam = user["name"]
             payload = [
                     {"uid": user["uid"]},
                     {"gid": user["gid"]},
@@ -235,7 +236,7 @@ def user(tgt, require_groups=False, tgt_type="glob"):
                     {"shell": user["shell"]},
                     {"groups": user["groups"]},
                     {"createhome": True},
-                    {"password": f"{{ salt[\"pillar.get\"](\"users:{user["name"]}\")}}"},
+                    {"password": f"{{ salt['pillar.get']('users:{username}')}}"},
                     {"date": shadow["lstchg"]},
                     {"mindays": shadow["min"]},
                     {"maxdays": shadow["max"]},
@@ -255,7 +256,8 @@ def user(tgt, require_groups=False, tgt_type="glob"):
                 payload.append({"workphone": user["workphone"]})
 
             state_contents[user["name"]] = {"user.present": payload}
-            pillars.users.update({user["name"]:f"\"{shadow["passwd"]}\""})
+            passwd = shadow["passwd"]
+            pillars.users.update({user["name"]:f"\"{passwd}\""})
 
         state = yaml.dump(state_contents)
         _generate_sls(minion, state, "users")
