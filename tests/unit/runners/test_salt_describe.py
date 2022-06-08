@@ -51,3 +51,31 @@ def test_pkg():
                 with patch("salt.utils.files.fopen", mock_open()) as open_mock:
                     assert salt_describe_runner.pkg("minion") == True
                     open_mock.assert_has_calls(expected_calls, any_order=True)
+
+
+def test_group():
+    group_getent = {
+        "minion": [
+            {"gid": 4, "members": ["syslog", "whytewolf"], "name": "adm", "passwd": "x"},
+            {"gid": 0, "members": [], "name": "root", "passwd": "x"},
+        ]
+    }
+
+    expected_calls = [
+        call().write(
+            "adm:\n  group.present:\n  - gid: 4\nroot:\n  group.present:\n  - gid: 0\n"
+        ),
+        call().write("include:\n- minion.groups"),
+    ]
+
+    with patch.dict(
+        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=group_getent)}
+    ):
+        with patch.dict(
+            salt_describe_runner.__salt__,
+            {"config.get": MagicMock(return_value=["/srv/salt", "/srv/spm/salt"])},
+        ):
+            with patch("os.listdir", return_value=["groups.sls"]):
+                with patch("salt.utils.files.fopen", mock_open()) as open_mock:
+                    assert salt_describe_runner.group("minion") == True
+                    open_mock.assert_has_calls(expected_calls, any_order=True)
