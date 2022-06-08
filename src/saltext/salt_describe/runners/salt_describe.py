@@ -304,6 +304,49 @@ def host(tgt, tgt_type="glob"):
     return True
 
 
+def timezone(tgt, tgt_type="glob"):
+    """
+    Gather enabled and disabled services on minions and build a state file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.service minion-tgt
+
+    """
+
+    timezones = __salt__["salt.execute"](
+        tgt,
+        "timezone.get_zone",
+        tgt_type=tgt_type,
+    )
+
+    for minion in list(timezones.keys()):
+        timezone = timezones[minion]
+
+        state_contents = {}
+        state_name = "{}".format(timezone)
+        state_contents = {timezone: {"timezone.system": []}}
+        breakpoint()
+
+        state = yaml.dump(state_contents)
+
+        state_file_root = __salt__["config.get"]("file_roots:base")[0]
+
+        minion_state_root = "{}/{}".format(state_file_root, minion)
+        if not os.path.exists(minion_state_root):
+            os.mkdir(minion_state_root)
+
+        minion_state_file = "{}/timezone.sls".format(minion_state_root)
+
+        with salt.utils.files.fopen(minion_state_file, "w") as fp_:
+            fp_.write(state)
+
+        _generate_init(minion)
+
+    return True
+
 def all(tgt, top=True, exclude=None, *args, **kwargs):
     """
     Run all describe methods against target

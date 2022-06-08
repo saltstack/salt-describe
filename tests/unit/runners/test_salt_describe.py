@@ -85,3 +85,24 @@ def test_host(tmp_path):
             with open(host_file, "r") as fp:
                 content = yaml.safe_load(fp.read())
                 assert content == expected_content
+
+def test_timezone(tmp_path):
+    """
+    test describe.host
+    """
+    timezone_list = {'poc-minion': 'America/Los_Angeles'}
+
+    expected_content = {'America/Los_Angeles': {'timezone.system': []}}
+
+    host_file = tmp_path / "poc-minion" / "timezone.sls"
+    with patch.dict(
+        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=timezone_list)}
+    ):
+        with patch.dict(
+            salt_describe_runner.__salt__,
+            {"config.get": MagicMock(return_value=[tmp_path])},
+        ):
+            assert salt_describe_runner.host("minion") == True
+            with open(host_file, "r") as fp:
+                content = yaml.safe_load(fp.read())
+                assert content == expected_content
