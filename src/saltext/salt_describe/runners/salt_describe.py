@@ -255,6 +255,55 @@ def service(tgt, tgt_type="glob"):
     return True
 
 
+def host(tgt, tgt_type="glob"):
+    """
+    Gather /etc/hosts file content on minions and build a state file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.host minion-tgt
+
+    """
+    ret = __salt__["salt.execute"](
+        tgt,
+        "hosts.list_hosts",
+        tgt_type=tgt_type,
+    )
+
+    for minion in list(ret.keys()):
+        content = ret[minion]
+        count = 0
+        state_contents = {}
+        comment = []
+        for key, value in content.items():
+            sls_id = f"host_file_content_{count}"
+            state_func = "host.present"
+            if key.startswith("comment"):
+                pass
+            else:
+                state_contents[sls_id] = {state_func: [{"ip": []}, {"names": []}]}
+                state_contents[sls_id][state_func][0]["ip"] = key
+                state_contents[sls_id][state_func][1]["names"] = value["aliases"]
+                count+=1
+
+        state = yaml.dump(state_contents)
+        state_file_root = __salt__["config.get"]("file_roots:base")[0]
+        minion_state_root = "{}/{}".format(state_file_root, minion)
+        if not os.path.exists(minion_state_root):
+            os.mkdir(minion_state_root)
+
+        minion_state_file = "{}/host.sls".format(minion_state_root)
+
+        with salt.utils.files.fopen(minion_state_file, "w") as fp_:
+            fp_.write(state)
+
+        _generate_init(minion)
+
+    return True
+
+
 def all(tgt, top=True, exclude=None, *args, **kwargs):
     """
     Run all describe methods against target
