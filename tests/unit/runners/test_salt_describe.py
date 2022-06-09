@@ -206,6 +206,83 @@ def test_user():
                     open_mock.return_value.write.assert_has_calls(expected_calls, any_order=True)
 
 
+def test_iptables(tmp_path):
+    """
+    test describe.iptables
+    """
+    host_list = {
+        "poc-minion": {
+            "filter": {
+                "INPUT": {
+                    "policy": "ACCEPT",
+                    "packet count": "319",
+                    "byte count": "57738",
+                    "rules": [
+                        {"source": ["203.0.113.51/32"], "jump": ["DROP"]},
+                        {
+                            "protocol": ["tcp"],
+                            "jump": ["ACCEPT"],
+                            "in-interface": ["eth0"],
+                            "match": ["tcp"],
+                            "destination_port": ["22"],
+                        },
+                    ],
+                    "rules_comment": {},
+                },
+                "FORWARD": {
+                    "policy": "ACCEPT",
+                    "packet count": "0",
+                    "byte count": "0",
+                    "rules": [],
+                    "rules_comment": {},
+                },
+                "OUTPUT": {
+                    "policy": "ACCEPT",
+                    "packet count": "331",
+                    "byte count": "33780",
+                    "rules": [],
+                    "rules_comment": {},
+                },
+            }
+        }
+    }
+
+    expected_content = {
+        "add_iptables_rule_0": {
+            "iptables.append": [
+                {"chain": "INPUT"},
+                {"table": "filter"},
+                {"source": "203.0.113.51/32"},
+                {"jump": "DROP"},
+            ]
+        },
+        "add_iptables_rule_1": {
+            "iptables.append": [
+                {"chain": "INPUT"},
+                {"table": "filter"},
+                {"protocol": "tcp"},
+                {"jump": "ACCEPT"},
+                {"in-interface": "eth0"},
+                {"match": "tcp"},
+                {"destination-port": "22"},
+            ]
+        },
+    }
+
+    host_file = tmp_path / "poc-minion" / "iptables.sls"
+    with patch.dict(
+        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=host_list)}
+    ):
+        with patch.dict(
+            salt_describe_runner.__salt__,
+            {"config.get": MagicMock(return_value=[tmp_path])},
+        ):
+            assert salt_describe_runner.iptables("minion") == True
+            with open(host_file) as fp:
+                content = yaml.safe_load(fp.read())
+                assert content == expected_content
+
+
 def test_all(tmp_path):
     """
     test describe.all

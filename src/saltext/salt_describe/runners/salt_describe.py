@@ -497,6 +497,50 @@ def _get_all_single_describe_methods():
     return names
 
 
+def iptables(tgt, tgt_type="glob"):
+    """
+    Gather the iptable rules for minions and generate a state file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.iptables minion-tgt
+    """
+    rules = __salt__["salt.execute"](
+        tgt,
+        "iptables.get_rules",
+        tgt_type=tgt_type,
+    )
+    for minion in list(rules.keys()):
+        state_contents = {}
+        state_func = "iptables.append"
+
+        rule = rules[minion]
+        table = list(rule)[0]
+        chains = list(rule[table])
+        count = 0
+        for chain in chains:
+
+            _rules = rule[table][chain]["rules"]
+            if not _rules:
+                break
+            for _rule in _rules:
+                kwargs = [{"chain": chain}, {"table": table}]
+                state_id = f"add_iptables_rule_{count}"
+                state_contents[state_id] = {state_func: []}
+                for kwarg in list(_rule.keys()):
+                    kwargs.append({kwarg.replace("_", "-"): " ".join(_rule[kwarg])})
+                state_contents[state_id][state_func] = kwargs
+                count += 1
+
+        state = yaml.dump(state_contents)
+
+        _generate_sls(minion, state, "iptables")
+
+    return True
+
+
 @_exclude_from_all
 def all(tgt, top=True, exclude=None, *args, **kwargs):
     """
