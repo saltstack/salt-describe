@@ -149,6 +149,29 @@ def test_timezone(tmp_path):
                 assert content == expected_content
 
 
+def test_sysctl():
+    sysctl_show = {"minion": {"vm.swappiness": 60, "vm.vfs_cache_pressure": 100}}
+
+    expected_calls = [
+        call().write(
+            "sysctl-vm.swappiness:\n  sysctl.present:\n  - name: vm.swappiness\n  - value: 60\n"
+        ),
+        call().write("include:\n- minion.sysctl\n"),
+    ]
+
+    with patch.dict(
+        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=sysctl_show)}
+    ):
+        with patch.dict(
+            salt_describe_runner.__salt__,
+            {"config.get": MagicMock(return_value=["/srv/salt", "/srv/spm/salt"])},
+        ):
+            with patch("os.listdir", return_value=["sysctl.sls"]):
+                with patch("salt.utils.files.fopen", mock_open()) as open_mock:
+                    assert salt_describe_runner.sysctl("minion", ["vm.swappiness"]) == True
+                    open_mock.return_value.write.assert_has_calls(expected_calls, any_order=True)
+
+
 def test_user():
     user_getent = {
         "minion": [

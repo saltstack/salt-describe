@@ -497,6 +497,38 @@ def _get_all_single_describe_methods():
     return names
 
 
+def sysctl(tgt, sysctl, tgt_type="glob"):
+    """
+    read sysctl on the minions and build a state file
+    to managed the sysctl settings.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.sysctl minion-tgt '[vm.swappiness,vm.dirty_ratio]'
+    """
+    sysctls = __salt__["salt.execute"](
+        tgt,
+        "sysctl.show",
+        tgt_type=tgt_type,
+    )
+
+    state_contents = {}
+    for minion in list(sysctls.keys()):
+        for current in sysctl:
+            if current in sysctls[minion].keys():
+                payload = [{"name": current}, {"value": sysctls[minion][current]}]
+                state_contents[f"sysctl-{current}"] = {"sysctl.present": payload}
+            else:
+                log.error(f"{current} not found in sysctl")
+
+        state = yaml.dump(state_contents)
+        _generate_sls(minion, state, "sysctl")
+
+    return True
+
+
 def iptables(tgt, tgt_type="glob"):
     """
     Gather the iptable rules for minions and generate a state file.
