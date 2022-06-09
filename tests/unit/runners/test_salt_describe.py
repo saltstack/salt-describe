@@ -54,7 +54,6 @@ def test_pkg():
                     open_mock.assert_has_calls(expected_calls, any_order=True)
 
 
-
 def test_group():
     group_getent = {
         "minion": [
@@ -64,9 +63,7 @@ def test_group():
     }
 
     expected_calls = [
-        call().write(
-            "adm:\n  group.present:\n  - gid: 4\nroot:\n  group.present:\n  - gid: 0\n"
-        ),
+        call().write("adm:\n  group.present:\n  - gid: 4\nroot:\n  group.present:\n  - gid: 0\n"),
         call().write("include:\n- minion.groups"),
     ]
 
@@ -82,7 +79,7 @@ def test_group():
                     assert salt_describe_runner.group("minion") == True
                     open_mock.assert_has_calls(expected_calls, any_order=True)
 
-                    
+
 def test_host(tmp_path):
     """
     test describe.host
@@ -132,9 +129,9 @@ def test_timezone(tmp_path):
     """
     test describe.host
     """
-    timezone_list = {'poc-minion': 'America/Los_Angeles'}
+    timezone_list = {"poc-minion": "America/Los_Angeles"}
 
-    expected_content = {'America/Los_Angeles': {'timezone.system': []}}
+    expected_content = {"America/Los_Angeles": {"timezone.system": []}}
 
     host_file = tmp_path / "poc-minion" / "timezone.sls"
     with patch.dict(
@@ -145,6 +142,68 @@ def test_timezone(tmp_path):
             {"config.get": MagicMock(return_value=[tmp_path])},
         ):
             assert salt_describe_runner.host("minion") == True
-            with open(host_file, "r") as fp:
+            with open(host_file) as fp:
                 content = yaml.safe_load(fp.read())
                 assert content == expected_content
+
+
+def test_all(tmp_path):
+    """
+    test describe.all
+    """
+    group_getent = {
+        "minion": [
+            {"gid": 4, "members": ["syslog", "vecna"], "name": "adm", "passwd": "x"},
+            {"gid": 0, "members": [], "name": "root", "passwd": "x"},
+        ]
+    }
+
+    pkg_list = {
+        "minion": {
+            "pkg1": "0.1.2-3",
+            "pkg2": "1.2rc5-3",
+            "pkg3": "2.3.4-5",
+        }
+    }
+
+    expected_group_sls = {
+        "adm": {
+            "group.present": [{"gid": 4}],
+        },
+        "root": {
+            "group.present": [{"gid": 0}],
+        },
+    }
+
+    expected_pkg_sls = {
+        "installed_packages": {
+            "pkg.installed": [{"pkgs": [{key: value} for key, value in pkg_list["minion"].items()]}]
+        }
+    }
+
+    expected_init_sls = {"include": ["minion.groups", "minion.pkg"]}
+
+    exclude_list = list(salt_describe_runner._get_all_single_describe_methods().keys())
+    exclude_list.remove("pkg")
+    exclude_list.remove("group")
+
+    dunder_salt_mock = {
+        "salt.execute": MagicMock(side_effect=[group_getent, pkg_list]),
+        "describe.group": salt_describe_runner.group,
+        "describe.pkg": salt_describe_runner.pkg,
+    }
+
+    with patch.dict(salt_describe_runner.__salt__, dunder_salt_mock):
+        with patch.dict(
+            salt_describe_runner.__salt__,
+            {"config.get": MagicMock(return_value=[str(tmp_path)])},
+        ):
+            with patch("os.listdir", return_value=["groups.sls", "pkg.sls"]):
+                assert salt_describe_runner.all("minion", top=False, exclude=exclude_list) == True
+                sls_files = list(tmp_path.glob("**/*.sls"))
+                expected_files = ["init", "pkg", "groups"]
+                expected_sls = [expected_init_sls, expected_pkg_sls, expected_group_sls]
+                for filename, sls in zip(expected_files, expected_sls):
+                    sls_path = tmp_path / "minion" / f"{filename}.sls"
+                    assert sls_path in sls_files
+                    assert yaml.safe_load(sls_path.read_text()) == sls

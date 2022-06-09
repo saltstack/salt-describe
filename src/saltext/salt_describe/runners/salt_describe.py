@@ -4,6 +4,7 @@ Module for building state file
 .. versionadded:: 3006
 
 """
+import functools
 import inspect
 import logging
 import os.path
@@ -23,6 +24,12 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     return __virtualname__
+
+
+def _exclude_from_all(func):
+    functools.wraps(func)
+    func.__all_excluded__ = True
+    return func
 
 
 def _generate_init(minion=None, env="base"):
@@ -347,7 +354,6 @@ def timezone(tgt, tgt_type="glob"):
         state_contents = {}
         state_name = f"{timezone}"
         state_contents = {timezone: {"timezone.system": []}}
-        breakpoint()
 
         state = yaml.dump(state_contents)
 
@@ -356,6 +362,22 @@ def timezone(tgt, tgt_type="glob"):
     return True
 
 
+def _get_all_single_describe_methods():
+    """
+    Get all methods that should be run in `all`
+    """
+    single_functions = inspect.getmembers(sys.modules[__name__], inspect.isfunction)
+    names = {}
+    for name, func in single_functions:
+        if name.startswith("_"):
+            continue
+        if getattr(func, "__all_excluded__", False):
+            continue
+        names[name] = func
+    return names
+
+
+@_exclude_from_all
 def all(tgt, top=True, exclude=None, *args, **kwargs):
     """
     Run all describe methods against target
@@ -366,12 +388,16 @@ def all(tgt, top=True, exclude=None, *args, **kwargs):
 
         salt-run describe.all minion-tgt
     """
-    all_methods = ["pkg", "file"]
-    for method in all_methods:
-        if method == exclude:
+    all_methods = _get_all_single_describe_methods()
+    if exclude is None:
+        exclude = []
+    elif isinstance(exclude, str):
+        exclude = [exclude]
+    for name, func in all_methods.items():
+        if name in exclude:
             continue
         call_kwargs = kwargs.copy()
-        get_args = inspect.getfullargspec(getattr(sys.modules[__name__], method)).args
+        get_args = inspect.getfullargspec(func).args
         for arg in args:
             if arg not in get_args:
                 args.remove(arg)
@@ -381,7 +407,7 @@ def all(tgt, top=True, exclude=None, *args, **kwargs):
                 call_kwargs.pop(kwarg)
 
         try:
-            ret = __salt__[f"describe.{method}"](tgt, *args, **call_kwargs)
+            ret = __salt__[f"describe.{name}"](tgt, *args, **call_kwargs)
         except TypeError as err:
             log.error(err.args[0])
 
@@ -391,6 +417,7 @@ def all(tgt, top=True, exclude=None, *args, **kwargs):
     return True
 
 
+@_exclude_from_all
 def top(tgt, tgt_type="glob", env="base"):
     """
     Add the generated states to top.sls
