@@ -363,6 +363,9 @@ def timezone(tgt, tgt_type="glob"):
 
 
 def _get_all_single_describe_methods():
+    """
+    Get all methods that should be run in `all`
+    """
     single_functions = inspect.getmembers(sys.modules[__name__], inspect.isfunction)
     names = {}
     for name, func in single_functions:
