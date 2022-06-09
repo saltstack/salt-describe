@@ -356,7 +356,7 @@ def timezone(tgt, tgt_type="glob"):
     return True
 
 
-def sysctl(tgt, tgt_type="glob"):
+def sysctl(tgt,sysctl, tgt_type="glob"):
     """
     read sysctl on the minions and build a state file
     to managed the sysctl settings.
@@ -365,7 +365,7 @@ def sysctl(tgt, tgt_type="glob"):
 
     .. code-block:: bash
 
-        salt-run describe.sysctl minion-tgt
+        salt-run describe.sysctl minion-tgt '[vm.swappiness,vm.dirty_ratio]'
     """
     sysctls = __salt__["salt.execute"](
         tgt,
@@ -373,32 +373,14 @@ def sysctl(tgt, tgt_type="glob"):
         tgt_type=tgt_type,
     )
 
-    fail_list = [
-            "dev.cdrom.info",
-            "fs.dentry-state",
-            "fs.file-nr",
-            "fs.inode-nr",
-            "fs.inode-state",
-            "kernel.ns_last_pid",
-            "kernel.random.entropy_avail",
-            "kernel.random.uuid",
-            "kernel.seccomp.actions_avail",
-            "kernel.seccomp.actions_logged",
-            "kernel.version",
-            "net.ipv4.tcp_allowed_congestion_control",
-            "net.ipv4.tcp_available_congestion_control"
-            ]
-
-
-
     state_contents = {}
     for minion in list(sysctls.keys()):
-        for sysctl, value in sysctls[minion].items():
-            if sysctl in fail_list:
-                continue
-            if value:
-                payload = [{"name": sysctl}, {"value": value}]
-                state_contents[f"sysctl-{sysctl}"] = {"sysctl.present": payload}
+        for current in sysctl:
+            if current in sysctls[minion].keys():
+                payload = [{"name": current}, {"value": sysctls[minion][current]}]
+                state_contents[f"sysctl-{current}"] = {"sysctl.present": payload}
+            else:
+                log.error(f"{current} not found in sysctl")
 
         state = yaml.dump(state_contents)
         _generate_sls(minion, state, "sysctl")
