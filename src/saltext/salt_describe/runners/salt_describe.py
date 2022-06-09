@@ -373,14 +373,34 @@ def sysctl(tgt, tgt_type="glob"):
         tgt_type=tgt_type,
     )
 
+    fail_list = [
+            "dev.cdrom.info",
+            "fs.dentry-state",
+            "fs.file-nr",
+            "fs.inode-nr",
+            "fs.inode-state",
+            "kernel.ns_last_pid",
+            "kernel.random.entropy_avail",
+            "kernel.random.uuid",
+            "kernel.seccomp.actions_avail",
+            "kernel.seccomp.actions_logged",
+            "kernel.version",
+            "net.ipv4.tcp_allowed_congestion_control",
+            "net.ipv4.tcp_available_congestion_control"
+            ]
+
+
+
     state_contents = {}
     for minion in list(sysctls.keys()):
         for sysctl, value in sysctls[minion].items():
-            payload = [{"name": sysctl}, {"value": value}]
-            state_contents[f"sysctl-{sysctl}"] = {"sysctl.present": payload}
+            if sysctl in fail_list:
+                continue
+            if value:
+                payload = [{"name": sysctl}, {"value": value}]
+                state_contents[f"sysctl-{sysctl}"] = {"sysctl.present": payload}
 
         state = yaml.dump(state_contents)
-
         _generate_sls(minion, state, "sysctl")
 
     return True
