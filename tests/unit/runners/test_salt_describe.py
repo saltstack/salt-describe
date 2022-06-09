@@ -176,7 +176,7 @@ def test_iptables(tmp_path):
     """
     test describe.iptables
     """
-    host_list = {
+    iptables_ret = {
         "poc-minion": {
             "filter": {
                 "INPUT": {
@@ -235,16 +235,60 @@ def test_iptables(tmp_path):
         },
     }
 
-    host_file = tmp_path / "poc-minion" / "iptables.sls"
+    iptables_sls = tmp_path / "poc-minion" / "iptables.sls"
     with patch.dict(
-        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=host_list)}
+        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=iptables_ret)}
     ):
         with patch.dict(
             salt_describe_runner.__salt__,
             {"config.get": MagicMock(return_value=[tmp_path])},
         ):
             assert salt_describe_runner.iptables("minion") == True
-            with open(host_file) as fp:
+            with open(iptables_sls) as fp:
+                content = yaml.safe_load(fp.read())
+                assert content == expected_content
+
+
+def test_firewalld(tmp_path):
+    """
+    test describe.firewalld
+    """
+    firewalld_ret = {
+        "poc-minion": {
+            "public": {
+                "target": ["default"],
+                "icmp-block-inversion": ["no"],
+                "interfaces": [""],
+                "sources": [""],
+                "services": ["dhcpv6-client ssh"],
+                "ports": [""],
+                "protocols": [""],
+                "forward": ["yes"],
+                "masquerade": ["no"],
+                "forward-ports": [""],
+                "source-ports": [""],
+                "icmp-blocks": [""],
+                "rich rules": [""],
+            }
+        }
+    }
+
+    expected_content = {
+        "add_firewalld_rule_0": {
+            "firewalld.present": [{"name": "public"}, {"services": ["dhcpv6-client", "ssh"]}]
+        }
+    }
+
+    firewalld_sls = tmp_path / "poc-minion" / "firewalld.sls"
+    with patch.dict(
+        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=firewalld_ret)}
+    ):
+        with patch.dict(
+            salt_describe_runner.__salt__,
+            {"config.get": MagicMock(return_value=[tmp_path])},
+        ):
+            assert salt_describe_runner.firewalld("minion") == True
+            with open(firewalld_sls) as fp:
                 content = yaml.safe_load(fp.read())
                 assert content == expected_content
 
