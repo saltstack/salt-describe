@@ -92,6 +92,7 @@ def _generate_sls(minion, state, sls_name="default"):
     _generate_init(minion)
     return True
 
+
 def _generate_pillars(minion, pillar, sls_name="default"):
     pillar_file_root = pathlib.Path(__salt__["config.get"]("pillar_roots:base")[0])
 
@@ -249,8 +250,8 @@ def user(tgt, require_groups=False, tgt_type="glob"):
 
     state_contents = {}
     if require_groups is True:
-        __salt__["describe.group"](tgt=tgt,include_members=False, tgt_type=tgt_type)
-    
+        __salt__["describe.group"](tgt=tgt, include_members=False, tgt_type=tgt_type)
+
     users = __salt__["salt.execute"](
         tgt,
         "user.getent",
@@ -261,40 +262,34 @@ def user(tgt, require_groups=False, tgt_type="glob"):
     for minion in list(users.keys()):
         for user in users[minion]:
             shadow = __salt__["salt.execute"](
-                    minion,
-                    "shadow.info",
-                    arg=[user["name"]],
-                    tgt_type="glob"
-                    )[minion]
+                minion, "shadow.info", arg=[user["name"]], tgt_type="glob"
+            )[minion]
 
             homeexists = __salt__["salt.execute"](
-                    minion,
-                    "file.directory_exists",
-                    arg=[user["home"]],
-                    tgt_type="glob"
+                minion, "file.directory_exists", arg=[user["home"]], tgt_type="glob"
             )[minion]
             username = user["name"]
             payload = [
-                    {"name": username},
-                    {"uid": user["uid"]},
-                    {"gid": user["gid"]},
-                    {"allow_uid_change": True},
-                    {"allow_gid_change": True},
-                    {"home": user["home"]},
-                    {"shell": user["shell"]},
-                    {"groups": user["groups"]},
-                    {"password": f'{{{{ salt["pillar.get"]("users:{username}","*") }}}}'},
-                    {"date": shadow["lstchg"]},
-                    {"mindays": shadow["min"]},
-                    {"maxdays": shadow["max"]},
-                    {"inactdays": shadow["inact"]},
-                    {"expire": shadow["expire"]}
+                {"name": username},
+                {"uid": user["uid"]},
+                {"gid": user["gid"]},
+                {"allow_uid_change": True},
+                {"allow_gid_change": True},
+                {"home": user["home"]},
+                {"shell": user["shell"]},
+                {"groups": user["groups"]},
+                {"password": f'{{{{ salt["pillar.get"]("users:{username}","*") }}}}'},
+                {"date": shadow["lstchg"]},
+                {"mindays": shadow["min"]},
+                {"maxdays": shadow["max"]},
+                {"inactdays": shadow["inact"]},
+                {"expire": shadow["expire"]},
             ]
             if homeexists:
                 payload.append({"createhome": True})
             else:
                 payload.append({"createhome": False})
-            #GECOS
+            # GECOS
             if user["fullname"]:
                 payload.append({"fullname": user["fullname"]})
             if user["homephone"]:
@@ -309,7 +304,7 @@ def user(tgt, require_groups=False, tgt_type="glob"):
             state_contents[f"user-{username}"] = {"user.present": payload}
             passwd = shadow["passwd"]
             if passwd != "*":
-                pillars["users"].update({user["name"]:f"{passwd}"})
+                pillars["users"].update({user["name"]: f"{passwd}"})
 
         state = yaml.dump(state_contents)
         pillars = yaml.dump(pillars)
@@ -339,7 +334,7 @@ def group(tgt, include_members=False, tgt_type="glob"):
     for minion in list(groups.keys()):
         for group in groups[minion]:
             groupname = group["name"]
-            payload = [{"name": groupname},{"gid": group["gid"]}]
+            payload = [{"name": groupname}, {"gid": group["gid"]}]
             if include_members is True:
                 payload.append({"members": group["members"]})
             state_contents[f"group-{groupname}"] = {"group.present": payload}
@@ -604,4 +599,3 @@ def pillar_top(tgt, tgt_type="glob", env="base"):
         fp_.write(yaml.dump(top_file_dict))
 
     return True
-
