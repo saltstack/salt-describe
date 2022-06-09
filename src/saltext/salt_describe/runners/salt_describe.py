@@ -356,6 +356,36 @@ def timezone(tgt, tgt_type="glob"):
     return True
 
 
+def sysctl(tgt, tgt_type="glob"):
+    """
+    read sysctl on the minions and build a state file
+    to managed the sysctl settings.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.sysctl minion-tgt
+    """
+    sysctls = __salt__["salt.execute"](
+        tgt,
+        "sysctl.show",
+        tgt_type=tgt_type,
+    )
+
+    state_contents = {}
+    for minion in list(sysctls.keys()):
+        for sysctl, value in sysctls[minion].items():
+            payload = [{"name": sysctl}, {"value": value}]
+            state_contents[f"sysctl-{sysctl}"] = {"sysctl.present": payload}
+
+        state = yaml.dump(state_contents)
+
+        _generate_sls(minion, state, "sysctl")
+
+    return True
+
+
 def all(tgt, top=True, exclude=None, *args, **kwargs):
     """
     Run all describe methods against target
