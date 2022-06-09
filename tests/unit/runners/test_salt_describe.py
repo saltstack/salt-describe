@@ -63,8 +63,10 @@ def test_group():
     }
 
     expected_calls = [
-        call().write("adm:\n  group.present:\n  - gid: 4\nroot:\n  group.present:\n  - gid: 0\n"),
-        call().write("include:\n- minion.groups"),
+        call().write(
+            "group-adm:\n  group.present:\n  - name: adm\n  - gid: 4\ngroup-root:\n  group.present:\n  - name: root\n  - gid: 0\n"
+        ),
+        call().write("include:\n- minion.groups\n"),
     ]
 
     with patch.dict(
@@ -77,7 +79,7 @@ def test_group():
             with patch("os.listdir", return_value=["groups.sls"]):
                 with patch("salt.utils.files.fopen", mock_open()) as open_mock:
                     assert salt_describe_runner.group("minion") == True
-                    open_mock.assert_has_calls(expected_calls, any_order=True)
+                    open_mock.return_value.write.assert_has_calls(expected_calls, any_order=True)
 
 
 def test_host(tmp_path):
@@ -170,6 +172,140 @@ def test_sysctl():
                     open_mock.return_value.write.assert_has_calls(expected_calls, any_order=True)
 
 
+def test_user():
+    user_getent = {
+        "minion": [
+            {
+                "name": "testuser",
+                "uid": 1000,
+                "gid": 1000,
+                "groups": ["adm"],
+                "home": "/home/testuser",
+                "passwd": "x",
+                "shell": "/usr/bin/zsh",
+                "fullname": "",
+                "homephone": "",
+                "other": "",
+                "roomnumber": "",
+                "workphone": "",
+            }
+        ]
+    }
+    user_shadow = {
+        "minion": {
+            "expire": -1,
+            "inact": -1,
+            "lstchg": 19103,
+            "max": 99999,
+            "min": 0,
+            "name": "testuser",
+            "passwd": "$5$k69zJBp1LxA3q8az$XKEp1knAex0j.xoi/sdU4XllHpZ0JzYYRfASKGl6qZA",
+            "warn": 7,
+        }
+    }
+    fileexists = {"minion": True}
+    expected_calls = [
+        call().write(
+            'user-testuser:\n  user.present:\n  - name: testuser\n  - uid: 1000\n  - gid: 1000\n  - allow_uid_change: true\n  - allow_gid_change: true\n  - home: /home/testuser\n  - shell: /usr/bin/zsh\n  - groups:\n    - adm\n  - password: \'{{ salt["pillar.get"]("users:testuser","*") }}\'\n  - date: 19103\n  - mindays: 0\n  - maxdays: 99999\n  - inactdays: -1\n  - expire: -1\n  - createhome: true\n'
+        ),
+        call().write("include:\n- minion.users\n"),
+    ]
+
+    with patch.dict(
+        salt_describe_runner.__salt__,
+        {"salt.execute": MagicMock(side_effect=[user_getent, user_shadow, fileexists])},
+    ):
+        with patch.dict(
+            salt_describe_runner.__salt__,
+            {
+                "config.get": MagicMock(
+                    side_effect=[["/srv/salt"], ["/srv/salt"], ["/srv/pillar"], ["/srv/pillar"]]
+                )
+            },
+        ):
+            with patch("os.listdir", return_value=["users.sls"]):
+                with patch("salt.utils.files.fopen", mock_open()) as open_mock:
+                    assert salt_describe_runner.user("minion") == True
+                    open_mock.return_value.write.assert_has_calls(expected_calls, any_order=True)
+
+
+def test_iptables(tmp_path):
+    """
+    test describe.iptables
+    """
+    host_list = {
+        "poc-minion": {
+            "filter": {
+                "INPUT": {
+                    "policy": "ACCEPT",
+                    "packet count": "319",
+                    "byte count": "57738",
+                    "rules": [
+                        {"source": ["203.0.113.51/32"], "jump": ["DROP"]},
+                        {
+                            "protocol": ["tcp"],
+                            "jump": ["ACCEPT"],
+                            "in-interface": ["eth0"],
+                            "match": ["tcp"],
+                            "destination_port": ["22"],
+                        },
+                    ],
+                    "rules_comment": {},
+                },
+                "FORWARD": {
+                    "policy": "ACCEPT",
+                    "packet count": "0",
+                    "byte count": "0",
+                    "rules": [],
+                    "rules_comment": {},
+                },
+                "OUTPUT": {
+                    "policy": "ACCEPT",
+                    "packet count": "331",
+                    "byte count": "33780",
+                    "rules": [],
+                    "rules_comment": {},
+                },
+            }
+        }
+    }
+
+    expected_content = {
+        "add_iptables_rule_0": {
+            "iptables.append": [
+                {"chain": "INPUT"},
+                {"table": "filter"},
+                {"source": "203.0.113.51/32"},
+                {"jump": "DROP"},
+            ]
+        },
+        "add_iptables_rule_1": {
+            "iptables.append": [
+                {"chain": "INPUT"},
+                {"table": "filter"},
+                {"protocol": "tcp"},
+                {"jump": "ACCEPT"},
+                {"in-interface": "eth0"},
+                {"match": "tcp"},
+                {"destination-port": "22"},
+            ]
+        },
+    }
+
+    host_file = tmp_path / "poc-minion" / "iptables.sls"
+    with patch.dict(
+        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=host_list)}
+    ):
+        with patch.dict(
+            salt_describe_runner.__salt__,
+            {"config.get": MagicMock(return_value=[tmp_path])},
+        ):
+            assert salt_describe_runner.iptables("minion") == True
+            with open(host_file) as fp:
+                content = yaml.safe_load(fp.read())
+                assert content == expected_content
+
+
 def test_all(tmp_path):
     """
     test describe.all
@@ -190,11 +326,11 @@ def test_all(tmp_path):
     }
 
     expected_group_sls = {
-        "adm": {
-            "group.present": [{"gid": 4}],
+        "group-adm": {
+            "group.present": [{"name": "adm"}, {"gid": 4}],
         },
-        "root": {
-            "group.present": [{"gid": 0}],
+        "group-root": {
+            "group.present": [{"name": "root"}, {"gid": 0}],
         },
     }
 
