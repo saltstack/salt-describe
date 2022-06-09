@@ -389,7 +389,9 @@ def all(tgt, top=True, exclude=None, *args, **kwargs):
         salt-run describe.all minion-tgt
     """
     all_methods = _get_all_single_describe_methods()
-    if isinstance(exclude, str):
+    if exclude is None:
+        exclude = []
+    elif isinstance(exclude, str):
         exclude = [exclude]
     for name, func in all_methods.items():
         if name in exclude:
