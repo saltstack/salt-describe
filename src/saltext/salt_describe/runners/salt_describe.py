@@ -482,19 +482,39 @@ def timezone(tgt, tgt_type="glob"):
     return True
 
 
-def _get_all_single_describe_methods():
+def pip(tgt, tgt_type="glob", bin_env=None):
     """
-    Get all methods that should be run in `all`
+    Gather installed pip libraries and build a state file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.pip minion-tgt
+
     """
-    single_functions = inspect.getmembers(sys.modules[__name__], inspect.isfunction)
-    names = {}
-    for name, func in single_functions:
-        if name.startswith("_"):
-            continue
-        if getattr(func, "__all_excluded__", False):
-            continue
-        names[name] = func
-    return names
+
+    ret = __salt__["salt.execute"](
+        tgt,
+        "pip.freeze",
+        tgt_type=tgt_type,
+        bin_env=bin_env,
+    )
+
+    state_name = "installed_pip_libraries"
+    state_fun = "pip.installed"
+
+    for minion in list(ret.keys()):
+        minion_pip_list = ret[minion]
+        state_contents = {
+            state_name: {
+                state_fun: [{"pkgs": minion_pip_list}],
+            },
+        }
+
+        state = yaml.dump(state_contents)
+
+        _generate_sls(minion, state, "pip")
 
 
 def sysctl(tgt, sysctl, tgt_type="glob"):
@@ -625,6 +645,21 @@ def firewalld(tgt, tgt_type="glob"):
         _generate_sls(minion, state, "firewalld")
 
     return True
+
+
+def _get_all_single_describe_methods():
+    """
+    Get all methods that should be run in `all`
+    """
+    single_functions = inspect.getmembers(sys.modules[__name__], inspect.isfunction)
+    names = {}
+    for name, func in single_functions:
+        if name.startswith("_"):
+            continue
+        if getattr(func, "__all_excluded__", False):
+            continue
+        names[name] = func
+    return names
 
 
 @_exclude_from_all
