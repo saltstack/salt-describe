@@ -524,3 +524,167 @@ def test_all(tmp_path):
                     sls_path = tmp_path / "minion" / f"{filename}.sls"
                     assert sls_path in sls_files
                     assert yaml.safe_load(sls_path.read_text()) == sls
+
+
+def test_cron(tmp_path):
+    cron_ret = {
+        "minion": {
+            "pre": [
+                '10 12 * * 4 echo "hello there!"',
+                '#10 12 * * 3 echo "goodbye there!"',
+                '@weekly echo "special pre cron"',
+                "FENDER=STRATOCASTER",
+                "# THIS= BAD",
+                "",
+            ],
+            "crons": [
+                {
+                    "minute": "*",
+                    "hour": "*",
+                    "daymonth": "*",
+                    "month": "*",
+                    "dayweek": "1",
+                    "identifier": "SALT_CRON_JOB",
+                    "cmd": "echo foobar",
+                    "comment": "-- salt lol --",
+                    "commented": False,
+                },
+                {
+                    "minute": "*",
+                    "hour": "*",
+                    "daymonth": "*",
+                    "month": "*",
+                    "dayweek": "1",
+                    "identifier": "commented_cron",
+                    "cmd": "echo this is commented",
+                    "comment": "This is a comment on a commented cron job",
+                    "commented": True,
+                },
+            ],
+            "special": [
+                {
+                    "spec": "@weekly",
+                    "cmd": "echo silly goose",
+                    "identifier": "SILLY CRON",
+                    "comment": None,
+                    "commented": True,
+                },
+            ],
+            "env": [
+                {
+                    "name": "SALT",
+                    "value": "DESCRIBE",
+                },
+                {
+                    "name": "HELLO",
+                    "value": "to the world",
+                },
+            ],
+        },
+    }
+
+    expected_sls = {
+        "FENDER": {
+            "cron.env_present": [
+                {"value": "STRATOCASTER"},
+                {"user": "fake_user"},
+            ]
+        },
+        "HELLO": {
+            "cron.env_present": [
+                {"value": "to the world"},
+                {"user": "fake_user"},
+            ]
+        },
+        "SALT": {
+            "cron.env_present": [
+                {"value": "DESCRIBE"},
+                {"user": "fake_user"},
+            ]
+        },
+        'echo "goodbye there!"': {
+            "cron.present": [
+                {"minute": "10"},
+                {"hour": "12"},
+                {"daymonth": "*"},
+                {"month": "*"},
+                {"dayweek": "3"},
+                {"comment": None},
+                {"identifier": False},
+                {"commented": True},
+                {"user": "fake_user"},
+            ]
+        },
+        'echo "hello there!"': {
+            "cron.present": [
+                {"minute": "10"},
+                {"hour": "12"},
+                {"daymonth": "*"},
+                {"month": "*"},
+                {"dayweek": "4"},
+                {"comment": None},
+                {"identifier": False},
+                {"commented": False},
+                {"user": "fake_user"},
+            ]
+        },
+        'echo "special pre cron"': {
+            "cron.present": [
+                {"special": "@weekly"},
+                {"comment": None},
+                {"commented": False},
+                {"identifier": False},
+                {"user": "fake_user"},
+            ]
+        },
+        "echo foobar": {
+            "cron.present": [
+                {"user": "fake_user"},
+                {"minute": "*"},
+                {"hour": "*"},
+                {"daymonth": "*"},
+                {"month": "*"},
+                {"dayweek": "1"},
+                {"comment": "-- salt lol --"},
+                {"commented": False},
+                {"identifier": "SALT_CRON_JOB"},
+            ]
+        },
+        "echo silly goose": {
+            "cron.present": [
+                {"user": "fake_user"},
+                {"comment": None},
+                {"commented": True},
+                {"identifier": "SILLY CRON"},
+                {"special": "@weekly"},
+            ]
+        },
+        "echo this is commented": {
+            "cron.present": [
+                {"user": "fake_user"},
+                {"minute": "*"},
+                {"hour": "*"},
+                {"daymonth": "*"},
+                {"month": "*"},
+                {"dayweek": "1"},
+                {"comment": "This is a comment on a commented cron job"},
+                {"commented": True},
+                {"identifier": "commented_cron"},
+            ]
+        },
+    }
+
+    user = "fake_user"
+    cron_sls_file = tmp_path / "minion" / "cron.sls"
+
+    with patch.dict(
+        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=cron_ret)}
+    ):
+        with patch.dict(
+            salt_describe_runner.__salt__,
+            {"config.get": MagicMock(return_value=[tmp_path])},
+        ):
+            with patch("os.listdir", return_value=["cron.sls"]):
+                assert salt_describe_runner.cron("minion", user) == True
+                actual_sls = yaml.safe_load(cron_sls_file.read_text())
+                assert actual_sls == expected_sls
