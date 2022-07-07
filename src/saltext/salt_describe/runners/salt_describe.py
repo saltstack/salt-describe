@@ -801,6 +801,79 @@ def cron(tgt, user="root", include_pre=True, tgt_type="glob"):
     return True
 
 
+def pkgrepo(tgt, tgt_type="glob"):
+    """
+    Gather the package repo data for minions and generate a state file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.pkgrepo minion-tgt
+
+    """
+
+    pkgrepos = __salt__["salt.execute"](
+        tgt,
+        "pkg.list_repos",
+        tgt_type=tgt_type,
+    )
+
+    for minion in list(pkgrepos.keys()):
+        _, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
+
+        if grains["os_family"] not in ("Debian", "RedHat"):
+            log.debug("Unsupported minion")
+            continue
+
+        pkgrepo = pkgrepos[minion]
+
+        state_contents = {}
+        state_name = f"{pkgrepo}"
+        state_func = "pkgrepo.managed"
+
+        for _pkgrepo_name in pkgrepo:
+            if isinstance(pkgrepo[_pkgrepo_name], dict):
+
+                if grains["os_family"] == "RedHat":
+                    state_contents[_pkgrepo_name] = {state_func: [{"humanname": pkgrepo[_pkgrepo_name]["name"]},
+                                                                  {"gpgkey": pkgrepo[_pkgrepo_name]["gpgkey"]},
+                                                                  {"gpgcheck": pkgrepo[_pkgrepo_name]["gpgcheck"]},
+                                                                  {"enabled": pkgrepo[_pkgrepo_name]["enabled"]}]}
+
+                    if "metalink" in pkgrepo[_pkgrepo_name]:
+                        state_contents[_pkgrepo_name][state_func].append({"metalink": pkgrepo[_pkgrepo_name]["metalink"]})
+                    elif "baseurl" in pkgrepo[_pkgrepo_name]:
+                        state_contents[_pkgrepo_name][state_func].append({"baseurl": pkgrepo[_pkgrepo_name]["baseurl"]})
+                    elif "mirrorlist" in pkgrepo[_pkgrepo_name]:
+                        state_contents[_pkgrepo_name][state_func].append({"mirrorlist": pkgrepo[_pkgrepo_name]["mirrorlist"]})
+
+            elif isinstance(pkgrepo[_pkgrepo_name], list):
+                for item in pkgrepo[_pkgrepo_name]:
+                    if grains["os_family"] == "Debian":
+
+                        sls_id = re.sub("^#\ ", "", item["line"])
+
+                        state_contents[sls_id] = {state_func: [{"file": item["file"]},
+                                                               {"dist": item["dist"]},
+                                                               {"refresh": False},
+                                                               {"disabled": item["disabled"]}]}
+
+                        if "comps" in item and item["comps"]:
+                            comps = ",".join(item["comps"])
+                            state_contents[sls_id][state_func].append({"comps": comps})
+
+                        if "architectures" in item and item["architectures"]:
+                            architectures = ",".join(item["architectures"])
+                            state_contents[sls_id][state_func].append({"architectures": architectures})
+
+        state = yaml.dump(state_contents)
+
+        _generate_sls(minion, state, "pkgrepo")
+
+    return True
+
+
 def _get_all_single_describe_methods():
     """
     Get all methods that should be run in `all`
