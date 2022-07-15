@@ -9,6 +9,7 @@ import pytest
 import salt.config
 import salt.runners.salt as salt_runner
 import saltext.salt_describe.runners.salt_describe as salt_describe_runner
+import saltext.salt_describe.runners.salt_describe_pkg as salt_describe_pkg_runner
 import yaml
 
 log = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ def configure_loader_modules():
     }
     return {
         salt_describe_runner: module_globals,
+        salt_describe_pkg_runner: module_globals,
     }
 
 
@@ -43,15 +45,15 @@ def test_pkg():
         call().write("include:\n- minion.pkgs\n"),
     ]
     with patch.dict(
-        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=pkg_list)}
+        salt_describe_pkg_runner.__salt__, {"salt.execute": MagicMock(return_value=pkg_list)}
     ):
         with patch.dict(
-            salt_describe_runner.__salt__,
+            salt_describe_pkg_runner.__salt__,
             {"config.get": MagicMock(return_value=["/srv/salt", "/srv/spm/salt"])},
         ):
             with patch("os.listdir", return_value=["pkgs.sls"]):
                 with patch("salt.utils.files.fopen", mock_open()) as open_mock:
-                    assert salt_describe_runner.pkg("minion") == True
+                    assert salt_describe_pkg_runner.pkg("minion") == True
                     open_mock.assert_has_calls(expected_calls, any_order=True)
 
 
