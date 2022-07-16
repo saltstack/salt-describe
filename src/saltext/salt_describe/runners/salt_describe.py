@@ -11,7 +11,6 @@ import os.path
 import pathlib
 import re
 import sys
-import re
 
 import salt.daemons.masterapi
 import salt.utils.files
@@ -117,7 +116,6 @@ def _generate_pillars(minion, pillar, sls_name="default"):
 
     _generate_pillar_init(minion)
     return True
-
 
 
 def file(tgt, paths, tgt_type="glob"):
@@ -792,28 +790,42 @@ def pkgrepo(tgt, tgt_type="glob"):
             if isinstance(pkgrepo[_pkgrepo_name], dict):
 
                 if grains["os_family"] == "RedHat":
-                    state_contents[_pkgrepo_name] = {state_func: [{"humanname": pkgrepo[_pkgrepo_name]["name"]},
-                                                                  {"gpgkey": pkgrepo[_pkgrepo_name]["gpgkey"]},
-                                                                  {"gpgcheck": pkgrepo[_pkgrepo_name]["gpgcheck"]},
-                                                                  {"enabled": pkgrepo[_pkgrepo_name]["enabled"]}]}
+                    state_contents[_pkgrepo_name] = {
+                        state_func: [
+                            {"humanname": pkgrepo[_pkgrepo_name]["name"]},
+                            {"gpgkey": pkgrepo[_pkgrepo_name]["gpgkey"]},
+                            {"gpgcheck": pkgrepo[_pkgrepo_name]["gpgcheck"]},
+                            {"enabled": pkgrepo[_pkgrepo_name]["enabled"]},
+                        ]
+                    }
 
                     if "metalink" in pkgrepo[_pkgrepo_name]:
-                        state_contents[_pkgrepo_name][state_func].append({"metalink": pkgrepo[_pkgrepo_name]["metalink"]})
+                        state_contents[_pkgrepo_name][state_func].append(
+                            {"metalink": pkgrepo[_pkgrepo_name]["metalink"]}
+                        )
                     elif "baseurl" in pkgrepo[_pkgrepo_name]:
-                        state_contents[_pkgrepo_name][state_func].append({"baseurl": pkgrepo[_pkgrepo_name]["baseurl"]})
+                        state_contents[_pkgrepo_name][state_func].append(
+                            {"baseurl": pkgrepo[_pkgrepo_name]["baseurl"]}
+                        )
                     elif "mirrorlist" in pkgrepo[_pkgrepo_name]:
-                        state_contents[_pkgrepo_name][state_func].append({"mirrorlist": pkgrepo[_pkgrepo_name]["mirrorlist"]})
+                        state_contents[_pkgrepo_name][state_func].append(
+                            {"mirrorlist": pkgrepo[_pkgrepo_name]["mirrorlist"]}
+                        )
 
             elif isinstance(pkgrepo[_pkgrepo_name], list):
                 for item in pkgrepo[_pkgrepo_name]:
                     if grains["os_family"] == "Debian":
 
-                        sls_id = re.sub("^#\ ", "", item["line"])
+                        sls_id = re.sub(r"^#\ ", "", item["line"])
 
-                        state_contents[sls_id] = {state_func: [{"file": item["file"]},
-                                                               {"dist": item["dist"]},
-                                                               {"refresh": False},
-                                                               {"disabled": item["disabled"]}]}
+                        state_contents[sls_id] = {
+                            state_func: [
+                                {"file": item["file"]},
+                                {"dist": item["dist"]},
+                                {"refresh": False},
+                                {"disabled": item["disabled"]},
+                            ]
+                        }
 
                         if "comps" in item and item["comps"]:
                             comps = ",".join(item["comps"])
@@ -821,7 +833,9 @@ def pkgrepo(tgt, tgt_type="glob"):
 
                         if "architectures" in item and item["architectures"]:
                             architectures = ",".join(item["architectures"])
-                            state_contents[sls_id][state_func].append({"architectures": architectures})
+                            state_contents[sls_id][state_func].append(
+                                {"architectures": architectures}
+                            )
 
         state = yaml.dump(state_contents)
 
@@ -834,14 +848,17 @@ def _get_all_single_describe_methods():
     """
     Get all methods that should be run in `all`
     """
-    single_functions = inspect.getmembers(sys.modules[__name__], inspect.isfunction)
+    # single_functions = inspect.getmembers(sys.modules[__name__], inspect.isfunction)
+    single_functions = [
+        (name.lstrip("describe."), loaded_func)
+        for name, loaded_func in __salt__.items()
+        if name.startswith("describe")
+    ]
     names = {}
-    for name, func in single_functions:
-        if name.startswith("_"):
+    for name, loaded_func in single_functions:
+        if getattr(loaded_func, "__all_excluded__", False):
             continue
-        if getattr(func, "__all_excluded__", False):
-            continue
-        names[name] = func
+        names[name] = loaded_func
     return names
 
 
