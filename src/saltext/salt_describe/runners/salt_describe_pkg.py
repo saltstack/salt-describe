@@ -4,20 +4,9 @@ Module for building state file
 .. versionadded:: 3006
 
 """
-import functools
-import inspect
 import logging
-import os.path
-import pathlib
-import re
-import sys
-import re
 
-import salt.daemons.masterapi
-import salt.utils.files
-import salt.utils.pkg.deb
 import yaml
-
 from saltext.salt_describe.utils.salt_describe import generate_sls
 
 __virtualname__ = "describe"
