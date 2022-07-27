@@ -68,6 +68,6 @@ def firewalld(tgt, tgt_type="glob"):
 
         state = yaml.dump(state_contents)
 
-        generate_sls(minion, state, "firewalld")
+        generate_sls(__opts__, minion, state, "firewalld")
 
     return True

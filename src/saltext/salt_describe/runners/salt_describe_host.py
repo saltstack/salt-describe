@@ -52,6 +52,6 @@ def host(tgt, tgt_type="glob"):
                 count += 1
 
         state = yaml.dump(state_contents)
-        generate_sls(minion, state, "host")
+        generate_sls(__opts__, minion, state, "host")
 
     return True

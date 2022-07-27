@@ -7,9 +7,10 @@ import salt.utils.files
 import yaml
 
 
-def generate_sls(minion, state, sls_name="default"):
-    opts = salt.config.master_config(os.path.join(salt.syspaths.CONFIG_DIR, "master"))
-
+def generate_sls(opts, minion, state, sls_name="default"):
+    """
+    Generate an sls file for the minion with given state contents
+    """
     state_file_root = pathlib.Path(opts.get("file_roots").get("base")[0])
 
     minion_state_root = state_file_root / minion
@@ -21,16 +22,14 @@ def generate_sls(minion, state, sls_name="default"):
     with salt.utils.files.fopen(minion_state_file, "w") as fp_:
         fp_.write(state)
 
-    generate_init(minion)
+    generate_init(opts, minion)
     return True
 
 
-def generate_init(minion=None, env="base"):
+def generate_init(opts, minion=None, env="base"):
     """
     Generate the init.sls for the minion or minions
     """
-
-    opts = salt.config.master_config(os.path.join(salt.syspaths.CONFIG_DIR, "master"))
     state_file_root = opts.get("file_roots").get("base")[0]
 
     minion_state_root = f"{state_file_root}/{minion}"
@@ -53,11 +52,10 @@ def generate_init(minion=None, env="base"):
     return True
 
 
-def generate_pillar_init(minion=None, env="base"):
+def generate_pillar_init(opts, minion=None, env="base"):
     """
     Generate the init.sls for the minion or minions
     """
-    opts = salt.config.master_config(os.path.join(salt.syspaths.CONFIG_DIR, "master"))
     pillar_file_root = pathlib.Path(opts.get("pillar_roots").get("base")[0])
 
     minion_pillar_root = pillar_file_root / minion
@@ -80,8 +78,10 @@ def generate_pillar_init(minion=None, env="base"):
     return True
 
 
-def generate_pillars(minion, pillar, sls_name="default"):
-    opts = salt.config.master_config(os.path.join(salt.syspaths.CONFIG_DIR, "master"))
+def generate_pillars(opts, minion, pillar, sls_name="default"):
+    """
+    Generate pillar files for the minion to hold more sensitive information
+    """
     pillar_file_root = pathlib.Path(opts.get("pillar_roots").get("base")[0])
 
     minion_pillar_root = pillar_file_root / minion
@@ -93,5 +93,5 @@ def generate_pillars(minion, pillar, sls_name="default"):
     with salt.utils.files.fopen(minion_pillar_file, "w") as fp_:
         fp_.write(pillar)
 
-    generate_pillar_init(minion)
+    generate_pillar_init(opts, minion)
     return True

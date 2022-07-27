@@ -98,6 +98,6 @@ def file(tgt, paths, tgt_type="glob"):
             with salt.utils.files.fopen(path_file, "w") as fp_:
                 fp_.write(file_contents[minion][path])
 
-        generate_init(minion)
+        generate_init(__opts__, minion)
 
     return True

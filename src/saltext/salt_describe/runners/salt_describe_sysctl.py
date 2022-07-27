@@ -46,6 +46,6 @@ def sysctl(tgt, sysctl_items, tgt_type="glob"):
                 log.error("%s not found in sysctl", current)
 
         state = yaml.dump(state_contents)
-        generate_sls(minion, state, "sysctl")
+        generate_sls(__opts__, minion, state, "sysctl")
 
     return True

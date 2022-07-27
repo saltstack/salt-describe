@@ -59,6 +59,6 @@ def pkg(tgt, tgt_type="glob", include_version=True, single_state=True):
                     state_contents[state_name] = {"pkg.installed": [{"name": name}]}
             state = yaml.dump(state_contents)
 
-        generate_sls(minion, state, "pkg")
+        generate_sls(__opts__, minion, state, "pkg")
 
     return True

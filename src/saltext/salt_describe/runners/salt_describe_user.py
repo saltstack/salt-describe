@@ -92,8 +92,8 @@ def user(tgt, require_groups=False, tgt_type="glob"):
 
         state = yaml.dump(state_contents)
         pillars = yaml.dump(pillars)
-        generate_sls(minion, state, "users")
-        generate_pillars(minion, pillars, "users")
+        generate_sls(__opts__, minion, state, "users")
+        generate_pillars(__opts__, minion, pillars, "users")
     return True
 
 
@@ -125,6 +125,6 @@ def group(tgt, include_members=False, tgt_type="glob"):
 
         state = yaml.dump(state_contents)
 
-        generate_sls(minion, state, "groups")
+        generate_sls(__opts__, minion, state, "groups")
 
     return True

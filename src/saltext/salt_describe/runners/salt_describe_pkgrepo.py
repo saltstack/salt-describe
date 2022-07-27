@@ -106,6 +106,6 @@ def pkgrepo(tgt, tgt_type="glob"):
 
         state = yaml.dump(state_contents)
 
-        generate_sls(minion, state, state_name)
+        generate_sls(__opts__, minion, state, state_name)
 
     return True
