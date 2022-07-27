@@ -31,7 +31,6 @@ def _exclude_from_all(func):
     """
     Decorator to exclude functions from all function
     """
-    functools.wraps(func)
     func.__all_excluded__ = True
     return func
 
@@ -40,7 +39,6 @@ def _get_all_single_describe_methods():
     """
     Get all methods that should be run in `all`
     """
-    # single_functions = inspect.getmembers(sys.modules[__name__], inspect.isfunction)
     single_functions = [
         (name.replace("describe.", ""), loaded_func)
         for name, loaded_func in __salt__.items()
@@ -55,7 +53,7 @@ def _get_all_single_describe_methods():
 
 
 @_exclude_from_all
-def all_(tgt, top=True, exclude=None, *args, **kwargs):
+def all_(tgt, top=True, whitelist=None, blacklist=None, *args, **kwargs):
     """
     Run all describe methods against target
 
@@ -65,13 +63,37 @@ def all_(tgt, top=True, exclude=None, *args, **kwargs):
 
         salt-run describe.all minion-tgt
     """
+    if blacklist and whitelist:
+        log.error("Only one of blacklist and whitelist can be provided")
+        return False
+
     all_methods = _get_all_single_describe_methods()
-    if exclude is None:
-        exclude = []
-    elif isinstance(exclude, str):
-        exclude = [exclude]
-    for name, func in all_methods.items():
-        if name in exclude:
+
+    # Sanitize the whitelist and blacklist to the extremes if none are given
+    if blacklist is None:
+        blacklist = set()
+    elif isinstance(blacklist, str):
+        blacklist = {blacklist}
+    elif isinstance(blacklist, (list, tuple)):
+        blacklist = set(blacklist)
+
+    if whitelist is None:
+        whitelist = all_methods.keys()
+    elif isinstance(whitelist, str):
+        whitelist = {whitelist}
+    elif isinstance(whitelist, (list, tuple)):
+        whitelist = set(whitelist)
+
+    allowed_method_names = whitelist - blacklist
+    allowed_methods = {
+        name: func
+        for name, func in all_methods.items()
+        if name in allowed_method_names
+    }
+    log.debug("Allowed methods in all: %s", allowed_methods)
+
+    for name, func in allowed_methods.items():
+        if name in blacklist or name not in whitelist:
             continue
         call_kwargs = kwargs.copy()
         get_args = inspect.getfullargspec(func).args
@@ -83,6 +105,13 @@ def all_(tgt, top=True, exclude=None, *args, **kwargs):
             if kwarg not in get_args:
                 call_kwargs.pop(kwarg)
 
+        log.debug(
+            "Running describe.%s in all --  tgt: %s\targs: %s\tkwargs: %s",
+            name,
+            tgt,
+            args,
+            kwargs,
+        )
         try:
             __salt__[f"describe.{name}"](tgt, *args, **call_kwargs)
         except TypeError as err:

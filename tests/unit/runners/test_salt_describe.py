@@ -139,6 +139,6 @@ def test_all(tmp_path):
             with patch("os.listdir", return_value=["groups.sls", "pkg.sls"]):
                 with patch("salt.utils.files.fopen", mock_open()) as open_mock:
                     assert (
-                        salt_describe_runner.all("minion", top=False, exclude=exclude_list) is True
+                        salt_describe_runner.all_("minion", top=False, exclude=exclude_list) is True
                     )
                     open_mock.assert_has_calls(expected_calls, any_order=True)
