@@ -6,10 +6,11 @@ Module for building state file
 """
 import logging
 import os
+import pathlib
 
 import salt.utils.files  # pylint: disable=import-error
 import yaml
-from saltext.salt_describe.utils.salt_describe import generate_init
+from saltext.salt_describe.utils.salt_describe import generate_sls, get_minion_state_file_root
 
 __virtualname__ = "describe"
 
@@ -78,26 +79,18 @@ def file(tgt, paths, tgt_type="glob"):
     for minion in list(state_contents.keys()):
         state = yaml.dump(state_contents[minion])
 
-        state_file_root = __salt__["config.get"]("file_roots:base")[0]
+        generate_sls(__opts__, minion, state, "files")
 
-        minion_state_root = f"{state_file_root}/{minion}"
-        if not os.path.exists(minion_state_root):
-            os.mkdir(minion_state_root)
-
-        minion_state_file = f"{minion_state_root}/files.sls"
-
-        with salt.utils.files.fopen(minion_state_file, "w") as fp_:
-            fp_.write(state)
+        minion_state_root = get_minion_state_file_root(__opts__, minion)
+        print(minion_state_root)
 
         for path in file_contents[minion]:
-
-            path_file = f"{minion_state_root}/files/{path}"
-
-            os.makedirs(os.path.dirname(path_file), exist_ok=True)
+            path_obj = pathlib.Path(path)
+            path_file = minion_state_root / "files" / path_obj.relative_to(path_obj.anchor)
+            path_file.parent.mkdir(parents=True, exist_ok=True)
+            print(path_file)
 
             with salt.utils.files.fopen(path_file, "w") as fp_:
                 fp_.write(file_contents[minion][path])
-
-        generate_init(__opts__, minion)
 
     return True

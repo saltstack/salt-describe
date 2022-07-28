@@ -4,10 +4,8 @@ Module for building state file
 .. versionadded:: 3006
 
 """
-import functools
 import inspect
 import logging
-import os.path
 import pathlib
 
 import salt.daemons.masterapi  # pylint: disable=import-error
@@ -154,9 +152,10 @@ def top_(tgt, tgt_type="glob", env="base"):
 
     for minion in minions:
         add_top = []
-        for files in os.listdir(str(state_file_root / minion)):
-            if files.endswith(".sls") and not files.startswith("init"):
-                add_top.append(minion + "." + files.split(".sls")[0])
+        minion_file_root = state_file_root / minion
+        for file in minion_file_root.iterdir():
+            if file.suffix == ".sls" and file.stem != "init":
+                add_top.append(minion + "." + file.stem)
 
         if minion not in top_file_dict[env]:
             top_file_dict[env][minion] = add_top
@@ -200,9 +199,10 @@ def pillar_top(tgt, tgt_type="glob", env="base"):
 
     for minion in minions:
         add_top = []
-        for files in os.listdir(str(pillar_file_root / minion)):
-            if files.endswith(".sls") and not files.startswith("init"):
-                add_top.append(minion + "." + files.split(".sls")[0])
+        minion_pillar_root = pillar_file_root / minion
+        for file in minion_pillar_root.iterdir():
+            if file.suffix == ".sls" and file.stem != "init":
+                add_top.append(minion + "." + file.stem)
 
         if minion not in top_file_dict[env]:
             top_file_dict[env][minion] = add_top
