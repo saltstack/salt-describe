@@ -2,10 +2,9 @@ import logging
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-import yaml
-
 import pytest
 import saltext.salt_describe.runners.salt_describe_pkgrepo as salt_describe_pkgrepo_runner
+import yaml
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +76,9 @@ def test_pkgrepo_redhat():
                 {"gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial"},
                 {"gpgcheck": "1"},
                 {"enabled": "1"},
-                {"metalink": "https://mirrors.centos.org/metalink?repo=centos-appstream-$stream&arch=$basearch&protocol=https,http"}
+                {
+                    "metalink": "https://mirrors.centos.org/metalink?repo=centos-appstream-$stream&arch=$basearch&protocol=https,http"
+                },
             ]
         },
         "appstream-source": {
@@ -86,7 +87,9 @@ def test_pkgrepo_redhat():
                 {"gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial"},
                 {"gpgcheck": "1"},
                 {"enabled": "0"},
-                {"metalink": "https://mirrors.centos.org/metalink?repo=centos-appstream-source-$stream&arch=source&protocol=https,http"}
+                {
+                    "metalink": "https://mirrors.centos.org/metalink?repo=centos-appstream-source-$stream&arch=source&protocol=https,http"
+                },
             ]
         },
         "baseos": {
@@ -95,7 +98,9 @@ def test_pkgrepo_redhat():
                 {"gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial"},
                 {"gpgcheck": "1"},
                 {"enabled": "1"},
-                {"metalink": "https://mirrors.centos.org/metalink?repo=centos-baseos-$stream&arch=$basearch&protocol=https,http"}
+                {
+                    "metalink": "https://mirrors.centos.org/metalink?repo=centos-baseos-$stream&arch=$basearch&protocol=https,http"
+                },
             ]
         },
         "baseos-source": {
@@ -104,14 +109,21 @@ def test_pkgrepo_redhat():
                 {"gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial"},
                 {"gpgcheck": "1"},
                 {"enabled": "0"},
-                {"metalink": "https://mirrors.centos.org/metalink?repo=centos-baseos-source-$stream&arch=source&protocol=https,http"}
+                {
+                    "metalink": "https://mirrors.centos.org/metalink?repo=centos-baseos-source-$stream&arch=source&protocol=https,http"
+                },
             ]
-        }
+        },
     }
     redhat_sls = yaml.dump(redhat_sls_contents)
 
-    with patch.dict(salt_describe_pkgrepo_runner.__salt__, {"salt.execute": MagicMock(return_value=pkgrepo_list)}):
-        with patch("salt.utils.minions.get_minion_data", MagicMock(return_value=mock_minion_data)) as minion_data_mock:
+    with patch.dict(
+        salt_describe_pkgrepo_runner.__salt__,
+        {"salt.execute": MagicMock(return_value=pkgrepo_list)},
+    ):
+        with patch(
+            "salt.utils.minions.get_minion_data", MagicMock(return_value=mock_minion_data)
+        ) as minion_data_mock:
             with patch.object(salt_describe_pkgrepo_runner, "generate_sls") as generate_mock:
                 assert salt_describe_pkgrepo_runner.pkgrepo("minion") is True
                 minion_data_mock.assert_called_with("minion", {})
@@ -335,7 +347,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy"},
                 {"refresh": False},
                 {"disabled": False},
-                {"comps": "main,restricted"}
+                {"comps": "main,restricted"},
             ]
         },
         "deb http://us.archive.ubuntu.com/ubuntu jammy multiverse": {
@@ -344,7 +356,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy"},
                 {"refresh": False},
                 {"disabled": False},
-                {"comps": "multiverse"}
+                {"comps": "multiverse"},
             ]
         },
         "deb http://us.archive.ubuntu.com/ubuntu jammy universe": {
@@ -353,7 +365,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy"},
                 {"refresh": False},
                 {"disabled": False},
-                {"comps": "universe"}
+                {"comps": "universe"},
             ]
         },
         "deb http://us.archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse": {
@@ -362,7 +374,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-backports"},
                 {"refresh": False},
                 {"disabled": False},
-                {"comps": "main,restricted,universe,multiverse"}
+                {"comps": "main,restricted,universe,multiverse"},
             ]
         },
         "deb http://us.archive.ubuntu.com/ubuntu jammy-security main restricted": {
@@ -371,7 +383,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-security"},
                 {"refresh": False},
                 {"disabled": False},
-                {"comps": "main,restricted"}
+                {"comps": "main,restricted"},
             ]
         },
         "deb http://us.archive.ubuntu.com/ubuntu jammy-security multiverse": {
@@ -380,7 +392,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-security"},
                 {"refresh": False},
                 {"disabled": False},
-                {"comps": "multiverse"}
+                {"comps": "multiverse"},
             ]
         },
         "deb http://us.archive.ubuntu.com/ubuntu jammy-security universe": {
@@ -389,7 +401,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-security"},
                 {"refresh": False},
                 {"disabled": False},
-                {"comps": "universe"}
+                {"comps": "universe"},
             ]
         },
         "deb http://us.archive.ubuntu.com/ubuntu jammy-updates main restricted": {
@@ -398,7 +410,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-updates"},
                 {"refresh": False},
                 {"disabled": False},
-                {"comps": "main,restricted"}
+                {"comps": "main,restricted"},
             ]
         },
         "deb http://us.archive.ubuntu.com/ubuntu jammy-updates multiverse": {
@@ -407,7 +419,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-updates"},
                 {"refresh": False},
                 {"disabled": False},
-                {"comps": "multiverse"}
+                {"comps": "multiverse"},
             ]
         },
         "deb http://us.archive.ubuntu.com/ubuntu jammy-updates universe": {
@@ -416,7 +428,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-updates"},
                 {"refresh": False},
                 {"disabled": False},
-                {"comps": "universe"}
+                {"comps": "universe"},
             ]
         },
         "deb-src http://us.archive.ubuntu.com/ubuntu jammy main restricted": {
@@ -425,7 +437,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy"},
                 {"refresh": False},
                 {"disabled": True},
-                {"comps": "main,restricted"}
+                {"comps": "main,restricted"},
             ]
         },
         "deb-src http://us.archive.ubuntu.com/ubuntu jammy multiverse": {
@@ -434,7 +446,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy"},
                 {"refresh": False},
                 {"disabled": True},
-                {"comps": "multiverse"}
+                {"comps": "multiverse"},
             ]
         },
         "deb-src http://us.archive.ubuntu.com/ubuntu jammy universe": {
@@ -443,7 +455,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy"},
                 {"refresh": False},
                 {"disabled": True},
-                {"comps": "universe"}
+                {"comps": "universe"},
             ]
         },
         "deb-src http://us.archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse": {
@@ -452,7 +464,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-backports"},
                 {"refresh": False},
                 {"disabled": True},
-                {"comps": "main,restricted,universe,multiverse"}
+                {"comps": "main,restricted,universe,multiverse"},
             ]
         },
         "deb-src http://us.archive.ubuntu.com/ubuntu jammy-security main restricted": {
@@ -461,7 +473,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-security"},
                 {"refresh": False},
                 {"disabled": True},
-                {"comps": "main,restricted"}
+                {"comps": "main,restricted"},
             ]
         },
         "deb-src http://us.archive.ubuntu.com/ubuntu jammy-security multiverse": {
@@ -470,7 +482,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-security"},
                 {"refresh": False},
                 {"disabled": True},
-                {"comps": "multiverse"}
+                {"comps": "multiverse"},
             ]
         },
         "deb-src http://us.archive.ubuntu.com/ubuntu jammy-security universe": {
@@ -479,7 +491,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-security"},
                 {"refresh": False},
                 {"disabled": True},
-                {"comps": "universe"}
+                {"comps": "universe"},
             ]
         },
         "deb-src http://us.archive.ubuntu.com/ubuntu jammy-updates main restricted": {
@@ -488,7 +500,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-updates"},
                 {"refresh": False},
                 {"disabled": True},
-                {"comps": "main,restricted"}
+                {"comps": "main,restricted"},
             ]
         },
         "deb-src http://us.archive.ubuntu.com/ubuntu jammy-updates multiverse": {
@@ -497,7 +509,7 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-updates"},
                 {"refresh": False},
                 {"disabled": True},
-                {"comps": "multiverse"}
+                {"comps": "multiverse"},
             ]
         },
         "deb-src http://us.archive.ubuntu.com/ubuntu jammy-updates universe": {
@@ -506,15 +518,20 @@ def test_pkgrepo_debian():
                 {"dist": "jammy-updates"},
                 {"refresh": False},
                 {"disabled": True},
-                {"comps": "universe"}
+                {"comps": "universe"},
             ]
-        }
+        },
     }
 
     debian_sls = yaml.dump(debian_sls_contents)
 
-    with patch.dict(salt_describe_pkgrepo_runner.__salt__, {"salt.execute": MagicMock(return_value=pkgrepo_list)}):
-        with patch("salt.utils.minions.get_minion_data", MagicMock(return_value=mock_minion_data)) as minion_data_mock:
+    with patch.dict(
+        salt_describe_pkgrepo_runner.__salt__,
+        {"salt.execute": MagicMock(return_value=pkgrepo_list)},
+    ):
+        with patch(
+            "salt.utils.minions.get_minion_data", MagicMock(return_value=mock_minion_data)
+        ) as minion_data_mock:
             with patch.object(salt_describe_pkgrepo_runner, "generate_sls") as generate_mock:
                 assert salt_describe_pkgrepo_runner.pkgrepo("minion") is True
                 minion_data_mock.assert_called_with("minion", {})

@@ -1,5 +1,6 @@
 import logging
-from unittest.mock import MagicMock, mock_open
+from unittest.mock import MagicMock
+from unittest.mock import mock_open
 from unittest.mock import patch
 
 import pytest
@@ -35,9 +36,7 @@ def test_file(tmp_path):
     }
 
     file_sls = yaml.dump(file_sls_contents)
-    read_retval = {
-        "minion": "contents of testfile"
-    }
+    read_retval = {"minion": "contents of testfile"}
     stats_retval = {
         "minion": {
             "user": "testuser",
@@ -46,9 +45,15 @@ def test_file(tmp_path):
         },
     }
     execute_retvals = [read_retval, stats_retval]
-    with patch.dict(salt_describe_file_runner.__salt__, {"salt.execute": MagicMock(side_effect=execute_retvals)}):
+    with patch.dict(
+        salt_describe_file_runner.__salt__, {"salt.execute": MagicMock(side_effect=execute_retvals)}
+    ):
         with patch.object(salt_describe_file_runner, "generate_sls") as generate_mock:
-            with patch.object(salt_describe_file_runner, "get_minion_state_file_root", return_value=tmp_path / "file_roots" / "minion") as get_minion_root_mock:
+            with patch.object(
+                salt_describe_file_runner,
+                "get_minion_state_file_root",
+                return_value=tmp_path / "file_roots" / "minion",
+            ) as get_minion_root_mock:
                 with patch("salt.utils.files.fopen", mock_open()) as open_mock:
                     assert salt_describe_file_runner.file("minion", str(testfile)) is True
                     generate_mock.assert_called_with({}, "minion", file_sls, sls_name="files")

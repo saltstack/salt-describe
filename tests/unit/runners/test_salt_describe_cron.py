@@ -171,9 +171,12 @@ def test_cron(tmp_path):
     user = "fake_user"
     cron_sls = yaml.dump(expected_sls)
 
-    with patch.dict(salt_describe_cron_runner.__salt__, {"salt.execute": MagicMock(return_value=cron_ret)}):
+    with patch.dict(
+        salt_describe_cron_runner.__salt__, {"salt.execute": MagicMock(return_value=cron_ret)}
+    ):
         with patch.object(salt_describe_cron_runner, "generate_sls") as generate_mock:
             assert salt_describe_cron_runner.cron("minion", user) is True
             generate_mock.assert_called_with({}, "minion", cron_sls, sls_name="cron")
+
 
 # pylint: enable=line-too-long

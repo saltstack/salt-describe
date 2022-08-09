@@ -10,7 +10,8 @@ import pathlib
 
 import salt.utils.files  # pylint: disable=import-error
 import yaml
-from saltext.salt_describe.utils.salt_describe import generate_sls, get_minion_state_file_root
+from saltext.salt_describe.utils.salt_describe import generate_sls
+from saltext.salt_describe.utils.salt_describe import get_minion_state_file_root
 
 __virtualname__ = "describe"
 

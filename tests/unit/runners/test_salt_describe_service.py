@@ -27,10 +27,10 @@ def test_service():
             "salt-master": True,
             "salt-minion": True,
             "salt-api": False,
-            "random-service": True
+            "random-service": True,
         },
     }
-    
+
     service_sls_contents = {
         "salt-master": {
             "service.running": [{"enable": True}],
@@ -48,7 +48,10 @@ def test_service():
     service_sls = yaml.dump(service_sls_contents)
 
     execute_retvals = [enabled_retval, disabled_retval, status_retval]
-    with patch.dict(salt_describe_service_runner.__salt__, {"salt.execute": MagicMock(side_effect=execute_retvals)}):
+    with patch.dict(
+        salt_describe_service_runner.__salt__,
+        {"salt.execute": MagicMock(side_effect=execute_retvals)},
+    ):
         with patch.object(salt_describe_service_runner, "generate_sls") as generate_mock:
             assert salt_describe_service_runner.service("minion") is True
             generate_mock.assert_called_with({}, "minion", service_sls, sls_name="service")

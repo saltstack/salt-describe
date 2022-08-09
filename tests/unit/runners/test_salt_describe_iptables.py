@@ -83,7 +83,10 @@ def test_iptables(tmp_path):
     }
     iptables_sls = yaml.dump(iptables_sls_contents)
 
-    with patch.dict(salt_describe_iptables_runner.__salt__, {"salt.execute": MagicMock(return_value=iptables_ret)}):
+    with patch.dict(
+        salt_describe_iptables_runner.__salt__,
+        {"salt.execute": MagicMock(return_value=iptables_ret)},
+    ):
         with patch.object(salt_describe_iptables_runner, "generate_sls") as generate_mock:
             assert salt_describe_iptables_runner.iptables("minion") is True
             generate_mock.assert_called_with({}, "minion", iptables_sls, sls_name="iptables")

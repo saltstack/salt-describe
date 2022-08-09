@@ -3,10 +3,9 @@ import logging
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-import yaml
-
 import pytest
 import saltext.salt_describe.runners.salt_describe_user as salt_describe_user_runner
+import yaml
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +45,9 @@ def test_group():
 
     group_sls = yaml.dump(group_sls_contents)
 
-    with patch.dict(salt_describe_user_runner.__salt__, {"salt.execute": MagicMock(return_value=group_getent)}):
+    with patch.dict(
+        salt_describe_user_runner.__salt__, {"salt.execute": MagicMock(return_value=group_getent)}
+    ):
         with patch.object(salt_describe_user_runner, "generate_sls") as generate_mock:
             assert salt_describe_user_runner.group("minion") is True
             generate_mock.assert_called_with({}, "minion", group_sls, sls_name="groups")
@@ -86,7 +87,7 @@ def test_user():
     }
 
     fileexists = {"minion": True}
-    
+
     user_sls_contents = {
         "user-testuser": {
             "user.present": [
@@ -98,7 +99,7 @@ def test_user():
                 {"home": "/home/testuser"},
                 {"shell": "/usr/bin/zsh"},
                 {"groups": ["adm"]},
-                {"password": "{{ salt[\"pillar.get\"](\"users:testuser\",\"*\") }}"},
+                {"password": '{{ salt["pillar.get"]("users:testuser","*") }}'},
                 {"date": 19103},
                 {"mindays": 0},
                 {"maxdays": 99999},
@@ -112,16 +113,21 @@ def test_user():
     user_sls = yaml.dump(user_sls_contents)
 
     user_pillar_contents = {
-        "users": {
-            "testuser": "$5$k69zJBp1LxA3q8az$XKEp1knAex0j.xoi/sdU4XllHpZ0JzYYRfASKGl6qZA"
-        },
+        "users": {"testuser": "$5$k69zJBp1LxA3q8az$XKEp1knAex0j.xoi/sdU4XllHpZ0JzYYRfASKGl6qZA"},
     }
 
     user_pillar = yaml.dump(user_pillar_contents)
 
-    with patch.dict(salt_describe_user_runner.__salt__, {"salt.execute": MagicMock(side_effect=[user_getent, user_shadow, fileexists])}):
+    with patch.dict(
+        salt_describe_user_runner.__salt__,
+        {"salt.execute": MagicMock(side_effect=[user_getent, user_shadow, fileexists])},
+    ):
         with patch.object(salt_describe_user_runner, "generate_sls") as generate_sls_mock:
-            with patch.object(salt_describe_user_runner, "generate_pillars") as generate_pillars_mock:
+            with patch.object(
+                salt_describe_user_runner, "generate_pillars"
+            ) as generate_pillars_mock:
                 assert salt_describe_user_runner.user("minion") is True
                 generate_sls_mock.assert_called_with({}, "minion", user_sls, sls_name="users")
-                generate_pillars_mock.assert_called_with({}, "minion", user_pillar, sls_name="users")
+                generate_pillars_mock.assert_called_with(
+                    {}, "minion", user_pillar, sls_name="users"
+                )

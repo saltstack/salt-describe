@@ -85,7 +85,7 @@ def all_(tgt, top=True, whitelist=None, blacklist=None, **kwargs):
     if blacklist and whitelist:
         log.error("Only one of blacklist and whitelist can be provided")
         return False
-    
+
     all_methods = _get_all_single_describe_methods()
 
     # Sanitize the whitelist and blacklist to the extremes if none are given
@@ -106,9 +106,7 @@ def all_(tgt, top=True, whitelist=None, blacklist=None, **kwargs):
     # The set difference gives us all the allowed methods here
     allowed_method_names = whitelist - blacklist
     allowed_methods = {
-        name: func
-        for name, func in all_methods.items()
-        if name in allowed_method_names
+        name: func for name, func in all_methods.items() if name in allowed_method_names
     }
     log.debug("Allowed methods in all: %s", allowed_methods)
 
@@ -137,7 +135,7 @@ def all_(tgt, top=True, whitelist=None, blacklist=None, **kwargs):
             else:
                 log.error("Missing positional arg %s for describe.%s", arg, name)
                 return False
-        
+
         # Add the arbitrary positional arguments
         named_varargs = f"{name}_{varargs}"
         if named_varargs in kwargs:
@@ -171,7 +169,7 @@ def all_(tgt, top=True, whitelist=None, blacklist=None, **kwargs):
         )
 
         try:
-            # This follows the unwritten standard that the minion target must be the first argument 
+            # This follows the unwritten standard that the minion target must be the first argument
             __salt__[f"describe.{name}"](*call_args, **call_kwargs)
         except TypeError as err:
             log.error(err.args[0])

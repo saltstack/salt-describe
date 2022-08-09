@@ -1,6 +1,7 @@
 # pylint: disable=line-too-long
 import logging
-from unittest.mock import call, create_autospec
+from unittest.mock import call
+from unittest.mock import create_autospec
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -38,7 +39,9 @@ def test_all():
         "pkg": pkg_mock,
     }
 
-    with patch.object(salt_describe_runner, "_get_all_single_describe_methods", return_value=all_methods):
+    with patch.object(
+        salt_describe_runner, "_get_all_single_describe_methods", return_value=all_methods
+    ):
         dunder_salt_mock = {
             "describe.cron": cron_mock,
             "describe.file": file_mock,
@@ -50,7 +53,14 @@ def test_all():
         with patch.dict(salt_describe_runner.__salt__, dunder_salt_mock):
             blacklist = ["cron", "pkg"]
             assert (
-                salt_describe_runner.all_("minion", top=False, blacklist=blacklist, file_paths="/fake/path", bin_env="fake-env") is True
+                salt_describe_runner.all_(
+                    "minion",
+                    top=False,
+                    blacklist=blacklist,
+                    file_paths="/fake/path",
+                    bin_env="fake-env",
+                )
+                is True
             )
             cron_mock.assert_not_called()
             file_mock.assert_called_with("minion", "/fake/path")
@@ -59,7 +69,14 @@ def test_all():
 
             whitelist = ["pip", "file"]
             assert (
-                salt_describe_runner.all_("minion", top=False, whitelist=whitelist, paths="/fake/path", pip_bin_env="fake-env") is True
+                salt_describe_runner.all_(
+                    "minion",
+                    top=False,
+                    whitelist=whitelist,
+                    paths="/fake/path",
+                    pip_bin_env="fake-env",
+                )
+                is True
             )
             cron_mock.assert_not_called()
             file_mock.assert_called_with("minion", "/fake/path")
@@ -68,18 +85,18 @@ def test_all():
 
 
 def test__get_all_single_describe_methods():
-        dunder_salt_mock = {
-            "describe.fake": MagicMock(__all_excluded__=True),
-            "describe.file": MagicMock(),
-            "describe.pip": MagicMock(),
-        }
+    dunder_salt_mock = {
+        "describe.fake": MagicMock(__all_excluded__=True),
+        "describe.file": MagicMock(),
+        "describe.pip": MagicMock(),
+    }
 
-        # We should only get back file and pip
-        with patch.dict(salt_describe_runner.__salt__, dunder_salt_mock):
-            valid_funcs = salt_describe_runner._get_all_single_describe_methods()
-            assert "fake" not in valid_funcs
-            assert "file" in valid_funcs
-            assert "pip" in valid_funcs
+    # We should only get back file and pip
+    with patch.dict(salt_describe_runner.__salt__, dunder_salt_mock):
+        valid_funcs = salt_describe_runner._get_all_single_describe_methods()
+        assert "fake" not in valid_funcs
+        assert "file" in valid_funcs
+        assert "pip" in valid_funcs
 
 
 def test_top(tmp_path):
@@ -96,7 +113,9 @@ def test_top(tmp_path):
     }
 
     with patch("salt.daemons.masterapi.RemoteFuncs", remote_funcs_mock):
-        with patch.dict(salt_describe_runner.__salt__, {"config.get": MagicMock(return_value=[tmp_path])}):
+        with patch.dict(
+            salt_describe_runner.__salt__, {"config.get": MagicMock(return_value=[tmp_path])}
+        ):
             # Put some info in the top file beforehand
             top_file = tmp_path / "top.sls"
             with salt.utils.files.fopen(top_file, "w") as fp_:
@@ -140,7 +159,9 @@ def test_pillar_top(tmp_path):
     }
 
     with patch("salt.daemons.masterapi.RemoteFuncs", remote_funcs_mock):
-        with patch.dict(salt_describe_runner.__salt__, {"config.get": MagicMock(return_value=[tmp_path])}):
+        with patch.dict(
+            salt_describe_runner.__salt__, {"config.get": MagicMock(return_value=[tmp_path])}
+        ):
             # Put some info in the top file beforehand
             top_file = tmp_path / "top.sls"
             with salt.utils.files.fopen(top_file, "w") as fp_:
@@ -168,4 +189,3 @@ def test_pillar_top(tmp_path):
                     assert len(expected_contents[env][minion]) == len(top_contents[env][minion])
                     for sls in expected_contents[env][minion]:
                         assert sls in top_contents[env][minion]
-

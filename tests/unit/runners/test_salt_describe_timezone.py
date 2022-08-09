@@ -28,7 +28,10 @@ def test_timezone():
     timezone_sls_contents = {"America/Los_Angeles": {"timezone.system": []}}
     timezone_sls = yaml.dump(timezone_sls_contents)
 
-    with patch.dict(salt_describe_timezone_runner.__salt__, {"salt.execute": MagicMock(return_value=timezone_list)}):
+    with patch.dict(
+        salt_describe_timezone_runner.__salt__,
+        {"salt.execute": MagicMock(return_value=timezone_list)},
+    ):
         with patch.object(salt_describe_timezone_runner, "generate_sls") as generate_mock:
             assert salt_describe_timezone_runner.timezone("minion") is True
             generate_mock.assert_called_with({}, "minion", timezone_sls, sls_name="timezone")

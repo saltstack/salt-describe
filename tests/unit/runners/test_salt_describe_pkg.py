@@ -2,10 +2,9 @@ import logging
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-import yaml
-
 import pytest
 import saltext.salt_describe.runners.salt_describe_pkg as salt_describe_pkg_runner
+import yaml
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +37,9 @@ def test_pkg():
         },
     }
     pkg_sls = yaml.dump(pkg_sls_contents)
-    with patch.dict(salt_describe_pkg_runner.__salt__, {"salt.execute": MagicMock(return_value=pkg_list)}):
+    with patch.dict(
+        salt_describe_pkg_runner.__salt__, {"salt.execute": MagicMock(return_value=pkg_list)}
+    ):
         with patch.object(salt_describe_pkg_runner, "generate_sls") as generate_mock:
             assert salt_describe_pkg_runner.pkg("minion") is True
             generate_mock.assert_called_with({}, "minion", pkg_sls, sls_name="pkg")

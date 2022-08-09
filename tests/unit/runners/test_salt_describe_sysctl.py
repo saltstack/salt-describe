@@ -4,10 +4,9 @@ from unittest.mock import MagicMock
 from unittest.mock import mock_open
 from unittest.mock import patch
 
-import yaml
-
 import pytest
 import saltext.salt_describe.runners.salt_describe_sysctl as salt_describe_sysctl_runner
+import yaml
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +34,9 @@ def test_sysctl():
     }
     sysctl_sls = yaml.dump(sysctl_sls_contents)
 
-    with patch.dict(salt_describe_sysctl_runner.__salt__, {"salt.execute": MagicMock(return_value=sysctl_show)}):
+    with patch.dict(
+        salt_describe_sysctl_runner.__salt__, {"salt.execute": MagicMock(return_value=sysctl_show)}
+    ):
         with patch.object(salt_describe_sysctl_runner, "generate_sls") as generate_mock:
             assert salt_describe_sysctl_runner.sysctl("minion", ["vm.swappiness"]) is True
             generate_mock.assert_called_with({}, "minion", sysctl_sls, sls_name="sysctl")
