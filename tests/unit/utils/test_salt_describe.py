@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import yaml
 import saltext.salt_describe.utils.salt_describe as salt_describe_util
@@ -47,10 +47,12 @@ def test_generate_sls(tmp_path):
     state = yaml.dump(state_contents)
     minion_state_root = tmp_path / "prod" / "minion"
     with patch.object(salt_describe_util, "get_minion_state_file_root", return_value=minion_state_root):
-        assert salt_describe_util.generate_sls({}, "minion", state, sls_name="file", env="prod") is True
-        sls_file = minion_state_root / "file.sls"
-        assert sls_file.exists()
-        assert yaml.safe_load(sls_file.read_text()) == state_contents
+        with patch.object(salt_describe_util, "generate_init", MagicMock()) as init_mock:
+            assert salt_describe_util.generate_sls({}, "minion", state, sls_name="file", env="prod") is True
+            sls_file = minion_state_root / "file.sls"
+            assert sls_file.exists()
+            assert yaml.safe_load(sls_file.read_text()) == state_contents
+            init_mock.assert_called_with({}, "minion", env="prod")
 
 
 def test_generate_init(tmp_path):
@@ -76,10 +78,12 @@ def test_generate_pillars(tmp_path):
     pillar = yaml.dump(pillar_contents)
     minion_pillar_root = tmp_path / "prod" / "minion"
     with patch.object(salt_describe_util, "get_minion_pillar_file_root", return_value=minion_pillar_root):
-        assert salt_describe_util.generate_pillars({}, "minion", pillar, sls_name="users", env="prod") is True
-        pillar_file = minion_pillar_root / "users.sls"
-        assert pillar_file.exists()
-        assert yaml.safe_load(pillar_file.read_text()) == pillar_contents
+        with patch.object(salt_describe_util, "generate_pillar_init", MagicMock()) as init_mock:
+            assert salt_describe_util.generate_pillars({}, "minion", pillar, sls_name="users", env="prod") is True
+            pillar_file = minion_pillar_root / "users.sls"
+            assert pillar_file.exists()
+            assert yaml.safe_load(pillar_file.read_text()) == pillar_contents
+            init_mock.assert_called_with({}, "minion", env="prod")
 
 
 def test_generate_pillar_init(tmp_path):

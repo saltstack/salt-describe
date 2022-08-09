@@ -51,6 +51,6 @@ def pip(tgt, tgt_type="glob", bin_env=None):
 
         state = yaml.dump(state_contents)
 
-        generate_sls(__opts__, minion, state, "pip")
+        generate_sls(__opts__, minion, state, sls_name="pip")
 
     return True

@@ -50,7 +50,7 @@ def pkgrepo(tgt, tgt_type="glob"):
         _pkgrepo = pkgrepos[minion]
 
         state_contents = {}
-        state_name = f"{pkgrepo}"
+        state_name = "pkgrepo"
         state_func = "pkgrepo.managed"
 
         for _pkgrepo_name in _pkgrepo:
@@ -106,6 +106,6 @@ def pkgrepo(tgt, tgt_type="glob"):
 
         state = yaml.dump(state_contents)
 
-        generate_sls(__opts__, minion, state, state_name)
+        generate_sls(__opts__, minion, state, sls_name=state_name)
 
     return True

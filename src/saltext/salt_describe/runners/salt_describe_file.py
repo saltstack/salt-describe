@@ -78,19 +78,16 @@ def file(tgt, paths, tgt_type="glob"):
 
     for minion in list(state_contents.keys()):
         state = yaml.dump(state_contents[minion])
-
-        generate_sls(__opts__, minion, state, "files")
-
         minion_state_root = get_minion_state_file_root(__opts__, minion)
-        print(minion_state_root)
 
         for path in file_contents[minion]:
             path_obj = pathlib.Path(path)
             path_file = minion_state_root / "files" / path_obj.relative_to(path_obj.anchor)
             path_file.parent.mkdir(parents=True, exist_ok=True)
-            print(path_file)
 
             with salt.utils.files.fopen(path_file, "w") as fp_:
                 fp_.write(file_contents[minion][path])
+
+        generate_sls(__opts__, minion, state, sls_name="files")
 
     return True
