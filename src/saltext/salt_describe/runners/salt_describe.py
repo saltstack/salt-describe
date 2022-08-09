@@ -51,20 +51,41 @@ def _get_all_single_describe_methods():
 
 
 @_exclude_from_all
-def all_(tgt, top=True, whitelist=None, blacklist=None, *args, **kwargs):
+def all_(tgt, top=True, whitelist=None, blacklist=None, **kwargs):
     """
-    Run all describe methods against target
+    Run all describe methods against target.
+
+    One of either a blacklist or whitelist can be given to specify
+    which functions to run.  These can be either a string or python list.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-run describe.all minion-tgt
+        salt-run describe.all minion-tgt blacklist='["file", "user"]'
+
+    You can supply args and kwargs to functions that require them as well.
+    These are passed as explicit kwargs.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.all minion-tgt whitelist='["file", "pip"]' paths='["/tmp/testfile", "/tmp/testfile2"]'
+
+    If two functions take an arg or kwarg of the same name, you can differentiate them
+    by prefixing the argument name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.all minion-tgt whitelist='["file", "pip"]' file_paths='["/tmp/testfile", "/tmp/testfile2"]'
     """
     if blacklist and whitelist:
         log.error("Only one of blacklist and whitelist can be provided")
         return False
-
+    
     all_methods = _get_all_single_describe_methods()
 
     # Sanitize the whitelist and blacklist to the extremes if none are given
@@ -82,6 +103,7 @@ def all_(tgt, top=True, whitelist=None, blacklist=None, *args, **kwargs):
     elif isinstance(whitelist, (list, tuple)):
         whitelist = set(whitelist)
 
+    # The set difference gives us all the allowed methods here
     allowed_method_names = whitelist - blacklist
     allowed_methods = {
         name: func
@@ -93,25 +115,64 @@ def all_(tgt, top=True, whitelist=None, blacklist=None, *args, **kwargs):
     for name, func in allowed_methods.items():
         if name in blacklist or name not in whitelist:
             continue
-        call_kwargs = kwargs.copy()
-        get_args = inspect.getfullargspec(func).args
-        for arg in args:
-            if arg not in get_args:
-                args.remove(arg)
 
-        for kwarg in kwargs:
-            if kwarg not in get_args:
-                call_kwargs.pop(kwarg)
+        args, varargs, varkw, defaults, *_ = inspect.getfullargspec(func)
+        kwargs_sig = {}
+        if defaults:
+            num_defaults = len(defaults)
+            for idx in range(num_defaults):
+                kwargs_sig[args[-num_defaults + idx]] = defaults[idx]
+            args_sig = args[:-num_defaults]
+
+        # Let's deal with positional args first, short circuit if invalid
+        # The first argument will always be the minion target
+        call_args = [tgt]
+        for arg in args_sig[1:]:
+            named_arg = f"{name}_{arg}"
+            if arg in kwargs:
+                call_args.append(kwargs[arg])
+            elif named_arg in kwargs:
+                # We don't need that kwarg anymore, pop it
+                call_args.append(kwargs.pop(named_arg))
+            else:
+                log.error("Missing positional arg %s for describe.%s", arg, name)
+                return False
+        
+        # Add the arbitrary positional arguments
+        named_varargs = f"{name}_{varargs}"
+        if named_varargs in kwargs:
+            call_args.extend(kwargs.pop(named_varargs, []))
+        else:
+            call_args.extend(kwargs.get(varargs, []))
+
+        # Let's form the call_kwargs now
+        call_kwargs = {}
+        for kwarg in kwargs_sig:
+            named_kwarg = f"{name}_{kwarg}"
+            if kwarg in kwargs:
+                call_kwargs[kwarg] = kwargs[kwarg]
+            elif named_kwarg in kwargs:
+                # We don't need that kwarg anymore, pop it
+                call_kwargs[kwarg] = kwargs.pop(named_kwarg)
+
+        # Add the arbitrary keyword arguments
+        named_varkw = f"{name}_{varkw}"
+        if named_varkw in kwargs:
+            call_kwargs.update(kwargs.pop(named_varkw, {}))
+        else:
+            call_kwargs.update(kwargs.get(varkw, {}))
 
         log.debug(
             "Running describe.%s in all --  tgt: %s\targs: %s\tkwargs: %s",
             name,
             tgt,
-            args,
-            kwargs,
+            call_args,
+            call_kwargs,
         )
+
         try:
-            __salt__[f"describe.{name}"](tgt, *args, **call_kwargs)
+            # This follows the unwritten standard that the minion target must be the first argument 
+            __salt__[f"describe.{name}"](*call_args, **call_kwargs)
         except TypeError as err:
             log.error(err.args[0])
 
@@ -145,7 +206,7 @@ def top_(tgt, tgt_type="glob", env="base"):
     top_file_dict = {}
 
     with salt.utils.files.fopen(top_file, "r") as fp_:
-        top_file_contents = yaml.safe_load(fp_.read())
+        top_file_dict = yaml.safe_load(fp_.read())
 
     if env not in top_file_dict:
         top_file_dict[env] = {}
