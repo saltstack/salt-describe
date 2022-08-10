@@ -51,18 +51,18 @@ def _get_all_single_describe_methods():
 
 
 @_exclude_from_all
-def all_(tgt, top=True, whitelist=None, blacklist=None, **kwargs):
+def all_(tgt, top=True, include=None, exclude=None, **kwargs):
     """
     Run all describe methods against target.
 
-    One of either a blacklist or whitelist can be given to specify
+    One of either a exclude or include can be given to specify
     which functions to run.  These can be either a string or python list.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-run describe.all minion-tgt blacklist='["file", "user"]'
+        salt-run describe.all minion-tgt exclude='["file", "user"]'
 
     You can supply args and kwargs to functions that require them as well.
     These are passed as explicit kwargs.
@@ -71,7 +71,7 @@ def all_(tgt, top=True, whitelist=None, blacklist=None, **kwargs):
 
     .. code-block:: bash
 
-        salt-run describe.all minion-tgt whitelist='["file", "pip"]' paths='["/tmp/testfile", "/tmp/testfile2"]'
+        salt-run describe.all minion-tgt include='["file", "pip"]' paths='["/tmp/testfile", "/tmp/testfile2"]'
 
     If two functions take an arg or kwarg of the same name, you can differentiate them
     by prefixing the argument name.
@@ -80,38 +80,38 @@ def all_(tgt, top=True, whitelist=None, blacklist=None, **kwargs):
 
     .. code-block:: bash
 
-        salt-run describe.all minion-tgt whitelist='["file", "pip"]' file_paths='["/tmp/testfile", "/tmp/testfile2"]'
+        salt-run describe.all minion-tgt include='["file", "pip"]' file_paths='["/tmp/testfile", "/tmp/testfile2"]'
     """
-    if blacklist and whitelist:
-        log.error("Only one of blacklist and whitelist can be provided")
+    if exclude and include:
+        log.error("Only one of exclude and include can be provided")
         return False
 
     all_methods = _get_all_single_describe_methods()
 
-    # Sanitize the whitelist and blacklist to the extremes if none are given
-    if blacklist is None:
-        blacklist = set()
-    elif isinstance(blacklist, str):
-        blacklist = {blacklist}
-    elif isinstance(blacklist, (list, tuple)):
-        blacklist = set(blacklist)
+    # Sanitize the include and exclude to the extremes if none are given
+    if exclude is None:
+        exclude = set()
+    elif isinstance(exclude, str):
+        exclude = {exclude}
+    elif isinstance(exclude, (list, tuple)):
+        exclude = set(exclude)
 
-    if whitelist is None:
-        whitelist = all_methods.keys()
-    elif isinstance(whitelist, str):
-        whitelist = {whitelist}
-    elif isinstance(whitelist, (list, tuple)):
-        whitelist = set(whitelist)
+    if include is None:
+        include = all_methods.keys()
+    elif isinstance(include, str):
+        include = {include}
+    elif isinstance(include, (list, tuple)):
+        include = set(include)
 
     # The set difference gives us all the allowed methods here
-    allowed_method_names = whitelist - blacklist
+    allowed_method_names = include - exclude
     allowed_methods = {
         name: func for name, func in all_methods.items() if name in allowed_method_names
     }
     log.debug("Allowed methods in all: %s", allowed_methods)
 
     for name, func in allowed_methods.items():
-        if name in blacklist or name not in whitelist:
+        if name in exclude or name not in include:
             continue
 
         args, varargs, varkw, defaults, *_ = inspect.getfullargspec(func)

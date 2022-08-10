@@ -51,12 +51,12 @@ def test_all():
 
         # This should only run file and pip
         with patch.dict(salt_describe_runner.__salt__, dunder_salt_mock):
-            blacklist = ["cron", "pkg"]
+            exclude = ["cron", "pkg"]
             assert (
                 salt_describe_runner.all_(
                     "minion",
                     top=False,
-                    blacklist=blacklist,
+                    exclude=exclude,
                     file_paths="/fake/path",
                     bin_env="fake-env",
                 )
@@ -67,12 +67,12 @@ def test_all():
             pip_mock.assert_called_with("minion", bin_env="fake-env")
             pkg_mock.assert_not_called()
 
-            whitelist = ["pip", "file"]
+            include = ["pip", "file"]
             assert (
                 salt_describe_runner.all_(
                     "minion",
                     top=False,
-                    whitelist=whitelist,
+                    include=include,
                     paths="/fake/path",
                     pip_bin_env="fake-env",
                 )
