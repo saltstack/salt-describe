@@ -116,6 +116,7 @@ def all_(tgt, top=True, include=None, exclude=None, **kwargs):
 
         args, varargs, varkw, defaults, *_ = inspect.getfullargspec(func)
         kwargs_sig = {}
+        args_sig = args
         if defaults:
             num_defaults = len(defaults)
             for idx in range(num_defaults):
