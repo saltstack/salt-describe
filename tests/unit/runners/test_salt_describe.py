@@ -1,6 +1,6 @@
 # pylint: disable=line-too-long
+import inspect
 import logging
-from unittest.mock import call
 from unittest.mock import create_autospec
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -32,12 +32,19 @@ def test_all():
     file_mock = create_autospec(salt_describe_file_runner.file)
     pip_mock = create_autospec(salt_describe_pip_runner.pip)
     pkg_mock = create_autospec(salt_describe_pkg_runner.pkg)
+
     all_methods = {
         "cron": cron_mock,
         "file": file_mock,
         "pip": pip_mock,
         "pkg": pkg_mock,
     }
+
+    # Workaround for a bug in python 3.6: https://bugs.python.org/issue17185
+    inspect_retvals = [
+        inspect.signature(salt_describe_file_runner.file),
+        inspect.signature(salt_describe_pip_runner.pip),
+    ]
 
     with patch.object(
         salt_describe_runner, "_get_all_single_describe_methods", return_value=all_methods
@@ -51,37 +58,39 @@ def test_all():
 
         # This should only run file and pip
         with patch.dict(salt_describe_runner.__salt__, dunder_salt_mock):
-            exclude = ["cron", "pkg"]
-            assert (
-                salt_describe_runner.all_(
-                    "minion",
-                    top=False,
-                    exclude=exclude,
-                    file_paths="/fake/path",
-                    bin_env="fake-env",
+            with patch.object(salt_describe_runner, "signature", side_effect=inspect_retvals):
+                exclude = ["cron", "pkg"]
+                assert (
+                    salt_describe_runner.all_(
+                        "minion",
+                        top=False,
+                        exclude=exclude,
+                        file_paths="/fake/path",
+                        bin_env="fake-env",
+                    )
+                    is True
                 )
-                is True
-            )
-            cron_mock.assert_not_called()
-            file_mock.assert_called_with("minion", "/fake/path")
-            pip_mock.assert_called_with("minion", bin_env="fake-env")
-            pkg_mock.assert_not_called()
+                cron_mock.assert_not_called()
+                file_mock.assert_called_with("minion", "/fake/path")
+                pip_mock.assert_called_with("minion", "fake-env")
+                pkg_mock.assert_not_called()
 
-            include = ["pip", "file"]
-            assert (
-                salt_describe_runner.all_(
-                    "minion",
-                    top=False,
-                    include=include,
-                    paths="/fake/path",
-                    pip_bin_env="fake-env",
+            with patch.object(salt_describe_runner, "signature", side_effect=inspect_retvals):
+                include = ["pip", "file"]
+                assert (
+                    salt_describe_runner.all_(
+                        "minion",
+                        top=False,
+                        include=include,
+                        paths="/fake/path",
+                        pip_bin_env="fake-env",
+                    )
+                    is True
                 )
-                is True
-            )
-            cron_mock.assert_not_called()
-            file_mock.assert_called_with("minion", "/fake/path")
-            pip_mock.assert_called_with("minion", bin_env="fake-env")
-            pkg_mock.assert_not_called()
+                cron_mock.assert_not_called()
+                file_mock.assert_called_with("minion", "/fake/path")
+                pip_mock.assert_called_with("minion", "fake-env")
+                pkg_mock.assert_not_called()
 
 
 def test__get_all_single_describe_methods():

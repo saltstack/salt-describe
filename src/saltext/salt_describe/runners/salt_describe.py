@@ -4,9 +4,10 @@ Module for building state file
 .. versionadded:: 3006
 
 """
-import inspect
 import logging
 import pathlib
+from inspect import Parameter
+from inspect import signature
 
 import salt.daemons.masterapi  # pylint: disable=import-error
 import salt.utils.files  # pylint: disable=import-error
@@ -110,68 +111,71 @@ def all_(tgt, top=True, include=None, exclude=None, **kwargs):
     }
     log.debug("Allowed methods in all: %s", allowed_methods)
 
+    def _get_arg_for_func(p_name, func_name, kwargs):
+        """
+        Return the argument value and whether or not it failed to find
+        """
+        # Allow more specific arg to take precendence
+        spec_name = f"{func_name}_{p_name}"
+        if spec_name in kwargs:
+            return kwargs.get(spec_name), False
+        if p_name in kwargs:
+            return kwargs.get(p_name), False
+        return None, True
+
+    kwargs["tgt"] = tgt
+
     for name, func in allowed_methods.items():
-        if name in exclude or name not in include:
-            continue
+        sig = signature(func)
+        call_args = []
+        call_kwargs = {}
+        for p_name, p_obj in sig.parameters.items():
+            p_value, failed = _get_arg_for_func(p_name, name, kwargs)
 
-        args, varargs, varkw, defaults, *_ = inspect.getfullargspec(func)
-        kwargs_sig = {}
-        args_sig = args
-        if defaults:
-            num_defaults = len(defaults)
-            for idx in range(num_defaults):
-                kwargs_sig[args[-num_defaults + idx]] = defaults[idx]
-            args_sig = args[:-num_defaults]
-
-        # Let's deal with positional args first, short circuit if invalid
-        # The first argument will always be the minion target
-        call_args = [tgt]
-        for arg in args_sig[1:]:
-            named_arg = f"{name}_{arg}"
-            if arg in kwargs:
-                call_args.append(kwargs[arg])
-            elif named_arg in kwargs:
-                # We don't need that kwarg anymore, pop it
-                call_args.append(kwargs.pop(named_arg))
-            else:
-                log.error("Missing positional arg %s for describe.%s", arg, name)
+            # Take care of required args and kwargs
+            if failed and p_obj.kind == Parameter.POSITIONAL_ONLY:
+                log.error("Missing positional arg %s for describe.%s", p_name, name)
+                return False
+            if failed and p_obj.kind == Parameter.KEYWORD_ONLY and p_obj.default == Parameter.empty:
+                log.error("Missing required keyword arg %s for describe.%s", p_name, name)
                 return False
 
-        # Add the arbitrary positional arguments
-        named_varargs = f"{name}_{varargs}"
-        if named_varargs in kwargs:
-            call_args.extend(kwargs.pop(named_varargs, []))
-        else:
-            call_args.extend(kwargs.get(varargs, []))
+            # We can fail to find some args
+            if failed:
+                continue
 
-        # Let's form the call_kwargs now
-        call_kwargs = {}
-        for kwarg in kwargs_sig:
-            named_kwarg = f"{name}_{kwarg}"
-            if kwarg in kwargs:
-                call_kwargs[kwarg] = kwargs[kwarg]
-            elif named_kwarg in kwargs:
-                # We don't need that kwarg anymore, pop it
-                call_kwargs[kwarg] = kwargs.pop(named_kwarg)
+            if p_obj.kind in (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD):
+                call_args.append(p_value)
+            elif p_obj.kind == Parameter.VAR_POSITIONAL:
+                if not isinstance(p_value, list):
+                    log.error(f"{p_name} must be a Python list")
+                    return False
+                call_args.extend(p_value)
+            elif p_obj.kind == Parameter.KEYWORD_ONLY:
+                call_kwargs[p_name] = p_value
+            elif p_obj.kind == Parameter.VAR_KEYWORD:
+                if not isinstance(p_value, dict):
+                    log.error(f"{p_name} must be a Python dictionary")
+                    return False
+                call_kwargs.update(p_value)
 
-        # Add the arbitrary keyword arguments
-        named_varkw = f"{name}_{varkw}"
-        if named_varkw in kwargs:
-            call_kwargs.update(kwargs.pop(named_varkw, {}))
-        else:
-            call_kwargs.update(kwargs.get(varkw, {}))
+        try:
+            bound_sig = sig.bind(*call_args, **call_kwargs)
+        except TypeError:
+            log.error(f"Invalid args, kwargs for signature of {name}: {call_args}, {call_kwargs}")
+            return False
 
         log.debug(
             "Running describe.%s in all --  tgt: %s\targs: %s\tkwargs: %s",
             name,
             tgt,
-            call_args,
-            call_kwargs,
+            bound_sig.args,
+            bound_sig.kwargs,
         )
 
         try:
             # This follows the unwritten standard that the minion target must be the first argument
-            __salt__[f"describe.{name}"](*call_args, **call_kwargs)
+            __salt__[f"describe.{name}"](*bound_sig.args, **bound_sig.kwargs)
         except TypeError as err:
             log.error(err.args[0])
 
