@@ -1,33 +1,25 @@
-# pylint: disable=line-too-long
 import logging
-from unittest.mock import call
 from unittest.mock import MagicMock
-from unittest.mock import mock_open
 from unittest.mock import patch
 
 import pytest
-import salt.config  # pylint: disable=import-error
-import salt.runners.salt as salt_runner  # pylint: disable=import-error
-import saltext.salt_describe.runners.salt_describe as salt_describe_runner
 import saltext.salt_describe.runners.salt_describe_pkgrepo as salt_describe_pkgrepo_runner
+import yaml
 
 log = logging.getLogger(__name__)
 
 
 @pytest.fixture
 def configure_loader_modules():
-    module_globals = {
-        "__salt__": {"salt.execute": salt_runner.execute},
-        "__opts__": salt.config.DEFAULT_MASTER_OPTS.copy(),
-    }
     return {
-        salt_describe_runner: module_globals,
-        salt_describe_pkgrepo_runner: module_globals,
+        salt_describe_pkgrepo_runner: {
+            "__salt__": {"salt.execute": MagicMock()},
+            "__opts__": {},
+        },
     }
 
 
 def test_pkgrepo_redhat():
-
     pkgrepo_list = {
         "minion": {
             "baseos": {
@@ -75,33 +67,70 @@ def test_pkgrepo_redhat():
         }
     }
 
-    expected_calls = [
-        call().write("include:\n- minion.pkgrepo\n"),
-        call().write(
-            "appstream:\n  pkgrepo.managed:\n  - humanname: CentOS Stream $releasever - AppStream\n  - gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial\n  - gpgcheck: '1'\n  - enabled: '1'\n  - metalink: https://mirrors.centos.org/metalink?repo=centos-appstream-$stream&arch=$basearch&protocol=https,http\nappstream-source:\n  pkgrepo.managed:\n  - humanname: CentOS Stream $releasever - AppStream - Source\n  - gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial\n  - gpgcheck: '1'\n  - enabled: '0'\n  - metalink: https://mirrors.centos.org/metalink?repo=centos-appstream-source-$stream&arch=source&protocol=https,http\nbaseos:\n  pkgrepo.managed:\n  - humanname: CentOS Stream $releasever - BaseOS\n  - gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial\n  - gpgcheck: '1'\n  - enabled: '1'\n  - metalink: https://mirrors.centos.org/metalink?repo=centos-baseos-$stream&arch=$basearch&protocol=https,http\nbaseos-source:\n  pkgrepo.managed:\n  - humanname: CentOS Stream $releasever - BaseOS - Source\n  - gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial\n  - gpgcheck: '1'\n  - enabled: '0'\n  - metalink: https://mirrors.centos.org/metalink?repo=centos-baseos-source-$stream&arch=source&protocol=https,http\n"
-        ),
-    ]
     mock_minion_data = ({}, {"os_family": "RedHat"}, {})
 
+    redhat_sls_contents = {
+        "appstream": {
+            "pkgrepo.managed": [
+                {"humanname": "CentOS Stream $releasever - AppStream"},
+                {"gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial"},
+                {"gpgcheck": "1"},
+                {"enabled": "1"},
+                {
+                    "metalink": "https://mirrors.centos.org/metalink?repo=centos-appstream-$stream&arch=$basearch&protocol=https,http"
+                },
+            ]
+        },
+        "appstream-source": {
+            "pkgrepo.managed": [
+                {"humanname": "CentOS Stream $releasever - AppStream - Source"},
+                {"gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial"},
+                {"gpgcheck": "1"},
+                {"enabled": "0"},
+                {
+                    "metalink": "https://mirrors.centos.org/metalink?repo=centos-appstream-source-$stream&arch=source&protocol=https,http"
+                },
+            ]
+        },
+        "baseos": {
+            "pkgrepo.managed": [
+                {"humanname": "CentOS Stream $releasever - BaseOS"},
+                {"gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial"},
+                {"gpgcheck": "1"},
+                {"enabled": "1"},
+                {
+                    "metalink": "https://mirrors.centos.org/metalink?repo=centos-baseos-$stream&arch=$basearch&protocol=https,http"
+                },
+            ]
+        },
+        "baseos-source": {
+            "pkgrepo.managed": [
+                {"humanname": "CentOS Stream $releasever - BaseOS - Source"},
+                {"gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial"},
+                {"gpgcheck": "1"},
+                {"enabled": "0"},
+                {
+                    "metalink": "https://mirrors.centos.org/metalink?repo=centos-baseos-source-$stream&arch=source&protocol=https,http"
+                },
+            ]
+        },
+    }
+    redhat_sls = yaml.dump(redhat_sls_contents)
+
     with patch.dict(
-        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=pkgrepo_list)}
+        salt_describe_pkgrepo_runner.__salt__,
+        {"salt.execute": MagicMock(return_value=pkgrepo_list)},
     ):
-        with patch.dict(
-            salt_describe_runner.__salt__,
-            {"config.get": MagicMock(return_value=["/srv/salt", "/srv/spm/salt"])},
-        ):
-            with patch("os.listdir", return_value=["pkgrepo.sls"]):
-                with patch("salt.utils.files.fopen", mock_open()) as open_mock:
-                    with patch(
-                        "salt.utils.minions.get_minion_data",
-                        MagicMock(return_value=mock_minion_data),
-                    ):
-                        assert salt_describe_pkgrepo_runner.pkgrepo("minion") is True
-                        open_mock.assert_has_calls(expected_calls, any_order=True)
+        with patch(
+            "salt.utils.minions.get_minion_data", MagicMock(return_value=mock_minion_data)
+        ) as minion_data_mock:
+            with patch.object(salt_describe_pkgrepo_runner, "generate_sls") as generate_mock:
+                assert salt_describe_pkgrepo_runner.pkgrepo("minion") is True
+                minion_data_mock.assert_called_with("minion", {})
+                generate_mock.assert_called_with({}, "minion", redhat_sls, sls_name="pkgrepo")
 
 
 def test_pkgrepo_debian():
-
     pkgrepo_list = {
         "minion": {
             "http://us.archive.ubuntu.com/ubuntu": [
@@ -309,29 +338,201 @@ def test_pkgrepo_debian():
         }
     }
 
-    expected_calls = [
-        call().write("include:\n- minion.pkgrepo\n"),
-        call().write(
-            "deb http://us.archive.ubuntu.com/ubuntu jammy main restricted:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy\n  - refresh: false\n  - disabled: false\n  - comps: main,restricted\ndeb http://us.archive.ubuntu.com/ubuntu jammy multiverse:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy\n  - refresh: false\n  - disabled: false\n  - comps: multiverse\ndeb http://us.archive.ubuntu.com/ubuntu jammy universe:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy\n  - refresh: false\n  - disabled: false\n  - comps: universe\ndeb http://us.archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-backports\n  - refresh: false\n  - disabled: false\n  - comps: main,restricted,universe,multiverse\ndeb http://us.archive.ubuntu.com/ubuntu jammy-security main restricted:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-security\n  - refresh: false\n  - disabled: false\n  - comps: main,restricted\ndeb http://us.archive.ubuntu.com/ubuntu jammy-security multiverse:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-security\n  - refresh: false\n  - disabled: false\n  - comps: multiverse\ndeb http://us.archive.ubuntu.com/ubuntu jammy-security universe:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-security\n  - refresh: false\n  - disabled: false\n  - comps: universe\ndeb http://us.archive.ubuntu.com/ubuntu jammy-updates main restricted:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-updates\n  - refresh: false\n  - disabled: false\n  - comps: main,restricted\ndeb http://us.archive.ubuntu.com/ubuntu jammy-updates multiverse:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-updates\n  - refresh: false\n  - disabled: false\n  - comps: multiverse\ndeb http://us.archive.ubuntu.com/ubuntu jammy-updates universe:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-updates\n  - refresh: false\n  - disabled: false\n  - comps: universe\ndeb-src http://us.archive.ubuntu.com/ubuntu jammy main restricted:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy\n  - refresh: false\n  - disabled: true\n  - comps: main,restricted\ndeb-src http://us.archive.ubuntu.com/ubuntu jammy multiverse:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy\n  - refresh: false\n  - disabled: true\n  - comps: multiverse\ndeb-src http://us.archive.ubuntu.com/ubuntu jammy universe:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy\n  - refresh: false\n  - disabled: true\n  - comps: universe\ndeb-src http://us.archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-backports\n  - refresh: false\n  - disabled: true\n  - comps: main,restricted,universe,multiverse\ndeb-src http://us.archive.ubuntu.com/ubuntu jammy-security main restricted:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-security\n  - refresh: false\n  - disabled: true\n  - comps: main,restricted\ndeb-src http://us.archive.ubuntu.com/ubuntu jammy-security multiverse:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-security\n  - refresh: false\n  - disabled: true\n  - comps: multiverse\ndeb-src http://us.archive.ubuntu.com/ubuntu jammy-security universe:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-security\n  - refresh: false\n  - disabled: true\n  - comps: universe\ndeb-src http://us.archive.ubuntu.com/ubuntu jammy-updates main restricted:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-updates\n  - refresh: false\n  - disabled: true\n  - comps: main,restricted\ndeb-src http://us.archive.ubuntu.com/ubuntu jammy-updates multiverse:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-updates\n  - refresh: false\n  - disabled: true\n  - comps: multiverse\ndeb-src http://us.archive.ubuntu.com/ubuntu jammy-updates universe:\n  pkgrepo.managed:\n  - file: /etc/apt/sources.list\n  - dist: jammy-updates\n  - refresh: false\n  - disabled: true\n  - comps: universe\n"
-        ),
-    ]
     mock_minion_data = ({}, {"os_family": "Debian"}, {})
 
+    debian_sls_contents = {
+        "deb http://us.archive.ubuntu.com/ubuntu jammy main restricted": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy"},
+                {"refresh": False},
+                {"disabled": False},
+                {"comps": "main,restricted"},
+            ]
+        },
+        "deb http://us.archive.ubuntu.com/ubuntu jammy multiverse": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy"},
+                {"refresh": False},
+                {"disabled": False},
+                {"comps": "multiverse"},
+            ]
+        },
+        "deb http://us.archive.ubuntu.com/ubuntu jammy universe": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy"},
+                {"refresh": False},
+                {"disabled": False},
+                {"comps": "universe"},
+            ]
+        },
+        "deb http://us.archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-backports"},
+                {"refresh": False},
+                {"disabled": False},
+                {"comps": "main,restricted,universe,multiverse"},
+            ]
+        },
+        "deb http://us.archive.ubuntu.com/ubuntu jammy-security main restricted": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-security"},
+                {"refresh": False},
+                {"disabled": False},
+                {"comps": "main,restricted"},
+            ]
+        },
+        "deb http://us.archive.ubuntu.com/ubuntu jammy-security multiverse": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-security"},
+                {"refresh": False},
+                {"disabled": False},
+                {"comps": "multiverse"},
+            ]
+        },
+        "deb http://us.archive.ubuntu.com/ubuntu jammy-security universe": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-security"},
+                {"refresh": False},
+                {"disabled": False},
+                {"comps": "universe"},
+            ]
+        },
+        "deb http://us.archive.ubuntu.com/ubuntu jammy-updates main restricted": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-updates"},
+                {"refresh": False},
+                {"disabled": False},
+                {"comps": "main,restricted"},
+            ]
+        },
+        "deb http://us.archive.ubuntu.com/ubuntu jammy-updates multiverse": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-updates"},
+                {"refresh": False},
+                {"disabled": False},
+                {"comps": "multiverse"},
+            ]
+        },
+        "deb http://us.archive.ubuntu.com/ubuntu jammy-updates universe": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-updates"},
+                {"refresh": False},
+                {"disabled": False},
+                {"comps": "universe"},
+            ]
+        },
+        "deb-src http://us.archive.ubuntu.com/ubuntu jammy main restricted": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy"},
+                {"refresh": False},
+                {"disabled": True},
+                {"comps": "main,restricted"},
+            ]
+        },
+        "deb-src http://us.archive.ubuntu.com/ubuntu jammy multiverse": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy"},
+                {"refresh": False},
+                {"disabled": True},
+                {"comps": "multiverse"},
+            ]
+        },
+        "deb-src http://us.archive.ubuntu.com/ubuntu jammy universe": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy"},
+                {"refresh": False},
+                {"disabled": True},
+                {"comps": "universe"},
+            ]
+        },
+        "deb-src http://us.archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-backports"},
+                {"refresh": False},
+                {"disabled": True},
+                {"comps": "main,restricted,universe,multiverse"},
+            ]
+        },
+        "deb-src http://us.archive.ubuntu.com/ubuntu jammy-security main restricted": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-security"},
+                {"refresh": False},
+                {"disabled": True},
+                {"comps": "main,restricted"},
+            ]
+        },
+        "deb-src http://us.archive.ubuntu.com/ubuntu jammy-security multiverse": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-security"},
+                {"refresh": False},
+                {"disabled": True},
+                {"comps": "multiverse"},
+            ]
+        },
+        "deb-src http://us.archive.ubuntu.com/ubuntu jammy-security universe": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-security"},
+                {"refresh": False},
+                {"disabled": True},
+                {"comps": "universe"},
+            ]
+        },
+        "deb-src http://us.archive.ubuntu.com/ubuntu jammy-updates main restricted": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-updates"},
+                {"refresh": False},
+                {"disabled": True},
+                {"comps": "main,restricted"},
+            ]
+        },
+        "deb-src http://us.archive.ubuntu.com/ubuntu jammy-updates multiverse": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-updates"},
+                {"refresh": False},
+                {"disabled": True},
+                {"comps": "multiverse"},
+            ]
+        },
+        "deb-src http://us.archive.ubuntu.com/ubuntu jammy-updates universe": {
+            "pkgrepo.managed": [
+                {"file": "/etc/apt/sources.list"},
+                {"dist": "jammy-updates"},
+                {"refresh": False},
+                {"disabled": True},
+                {"comps": "universe"},
+            ]
+        },
+    }
+
+    debian_sls = yaml.dump(debian_sls_contents)
+
     with patch.dict(
-        salt_describe_runner.__salt__, {"salt.execute": MagicMock(return_value=pkgrepo_list)}
+        salt_describe_pkgrepo_runner.__salt__,
+        {"salt.execute": MagicMock(return_value=pkgrepo_list)},
     ):
-        with patch.dict(
-            salt_describe_runner.__salt__,
-            {"config.get": MagicMock(return_value=["/srv/salt", "/srv/spm/salt"])},
-        ):
-            with patch("os.listdir", return_value=["pkgrepo.sls"]):
-                with patch("salt.utils.files.fopen", mock_open()) as open_mock:
-                    with patch(
-                        "salt.utils.minions.get_minion_data",
-                        MagicMock(return_value=mock_minion_data),
-                    ):
-                        assert salt_describe_pkgrepo_runner.pkgrepo("minion") is True
-                        open_mock.assert_has_calls(expected_calls, any_order=True)
-
-
-# pylint: enable=line-too-long
+        with patch(
+            "salt.utils.minions.get_minion_data", MagicMock(return_value=mock_minion_data)
+        ) as minion_data_mock:
+            with patch.object(salt_describe_pkgrepo_runner, "generate_sls") as generate_mock:
+                assert salt_describe_pkgrepo_runner.pkgrepo("minion") is True
+                minion_data_mock.assert_called_with("minion", {})
+                generate_mock.assert_called_with({}, "minion", debian_sls, sls_name="pkgrepo")

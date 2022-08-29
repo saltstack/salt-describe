@@ -68,7 +68,7 @@ jobs:
           - 3.7
           - 3.8
         salt-version:
-          - 3002.6
+          - 3004.2
 
     steps:
     - uses: actions/checkout@v2
@@ -184,10 +184,10 @@ jobs:
       max-parallel: 3
       matrix:
         python-version:
-          - 3.6
+          # - 3.6
           - 3.7
         salt-version:
-          - 3002.6
+          - 3004.2
 
     steps:
     - uses: actions/checkout@v2
@@ -206,7 +206,7 @@ jobs:
       shell: bash
       env:
         SALT_REQUIREMENT: salt==${{ matrix.salt-version }}
-        EXTRA_REQUIREMENTS_INSTALL: Cython
+        # EXTRA_REQUIREMENTS_INSTALL: Cython
       run: |
         export PATH="/C/Program Files (x86)/Windows Kits/10/bin/10.0.18362.0/x64;$PATH"
         nox --force-color -e tests-3 --install-only
@@ -308,10 +308,10 @@ jobs:
       max-parallel: 3
       matrix:
         python-version:
-          - 3.6
+          # - 3.6
           - 3.7
         salt-version:
-          - 3002.6
+          - 3004.2
 
     steps:
     - uses: actions/checkout@v2

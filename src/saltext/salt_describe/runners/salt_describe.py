@@ -4,11 +4,10 @@ Module for building state file
 .. versionadded:: 3006
 
 """
-import functools
-import inspect
 import logging
-import os.path
 import pathlib
+from inspect import Parameter
+from inspect import signature
 
 import salt.daemons.masterapi  # pylint: disable=import-error
 import salt.utils.files  # pylint: disable=import-error
@@ -31,7 +30,6 @@ def _exclude_from_all(func):
     """
     Decorator to exclude functions from all function
     """
-    functools.wraps(func)
     func.__all_excluded__ = True
     return func
 
@@ -40,7 +38,6 @@ def _get_all_single_describe_methods():
     """
     Get all methods that should be run in `all`
     """
-    # single_functions = inspect.getmembers(sys.modules[__name__], inspect.isfunction)
     single_functions = [
         (name.replace("describe.", ""), loaded_func)
         for name, loaded_func in __salt__.items()
@@ -55,36 +52,130 @@ def _get_all_single_describe_methods():
 
 
 @_exclude_from_all
-def all_(tgt, top=True, exclude=None, *args, **kwargs):
+def all_(tgt, top=True, include=None, exclude=None, **kwargs):
     """
-    Run all describe methods against target
+    Run all describe methods against target.
+
+    One of either a exclude or include can be given to specify
+    which functions to run.  These can be either a string or python list.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-run describe.all minion-tgt
-    """
-    all_methods = _get_all_single_describe_methods()
-    if exclude is None:
-        exclude = []
-    elif isinstance(exclude, str):
-        exclude = [exclude]
-    for name, func in all_methods.items():
-        if name in exclude:
-            continue
-        call_kwargs = kwargs.copy()
-        get_args = inspect.getfullargspec(func).args
-        for arg in args:
-            if arg not in get_args:
-                args.remove(arg)
+        salt-run describe.all minion-tgt exclude='["file", "user"]'
 
-        for kwarg in kwargs:
-            if kwarg not in get_args:
-                call_kwargs.pop(kwarg)
+    You can supply args and kwargs to functions that require them as well.
+    These are passed as explicit kwargs.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.all minion-tgt include='["file", "pip"]' paths='["/tmp/testfile", "/tmp/testfile2"]'
+
+    If two functions take an arg or kwarg of the same name, you can differentiate them
+    by prefixing the argument name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run describe.all minion-tgt include='["file", "pip"]' file_paths='["/tmp/testfile", "/tmp/testfile2"]'
+    """
+    if exclude and include:
+        log.error("Only one of exclude and include can be provided")
+        return False
+
+    all_methods = _get_all_single_describe_methods()
+
+    # Sanitize the include and exclude to the extremes if none are given
+    if exclude is None:
+        exclude = set()
+    elif isinstance(exclude, str):
+        exclude = {exclude}
+    elif isinstance(exclude, (list, tuple)):
+        exclude = set(exclude)
+
+    if include is None:
+        include = all_methods.keys()
+    elif isinstance(include, str):
+        include = {include}
+    elif isinstance(include, (list, tuple)):
+        include = set(include)
+
+    # The set difference gives us all the allowed methods here
+    allowed_method_names = include - exclude
+    allowed_methods = {
+        name: func for name, func in all_methods.items() if name in allowed_method_names
+    }
+    log.debug("Allowed methods in all: %s", allowed_methods)
+
+    def _get_arg_for_func(p_name, func_name, kwargs):
+        """
+        Return the argument value and whether or not it failed to find
+        """
+        # Allow more specific arg to take precendence
+        spec_name = f"{func_name}_{p_name}"
+        if spec_name in kwargs:
+            return kwargs.get(spec_name), False
+        if p_name in kwargs:
+            return kwargs.get(p_name), False
+        return None, True
+
+    kwargs["tgt"] = tgt
+
+    for name, func in allowed_methods.items():
+        sig = signature(func)
+        call_args = []
+        call_kwargs = {}
+        for p_name, p_obj in sig.parameters.items():
+            p_value, failed = _get_arg_for_func(p_name, name, kwargs)
+
+            # Take care of required args and kwargs
+            if failed and p_obj.kind == Parameter.POSITIONAL_ONLY:
+                log.error("Missing positional arg %s for describe.%s", p_name, name)
+                return False
+            if failed and p_obj.kind == Parameter.KEYWORD_ONLY and p_obj.default == Parameter.empty:
+                log.error("Missing required keyword arg %s for describe.%s", p_name, name)
+                return False
+
+            # We can fail to find some args
+            if failed:
+                continue
+
+            if p_obj.kind in (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD):
+                call_args.append(p_value)
+            elif p_obj.kind == Parameter.VAR_POSITIONAL:
+                if not isinstance(p_value, list):
+                    log.error(f"{p_name} must be a Python list")
+                    return False
+                call_args.extend(p_value)
+            elif p_obj.kind == Parameter.KEYWORD_ONLY:
+                call_kwargs[p_name] = p_value
+            elif p_obj.kind == Parameter.VAR_KEYWORD:
+                if not isinstance(p_value, dict):
+                    log.error(f"{p_name} must be a Python dictionary")
+                    return False
+                call_kwargs.update(p_value)
 
         try:
-            __salt__[f"describe.{name}"](tgt, *args, **call_kwargs)
+            bound_sig = sig.bind(*call_args, **call_kwargs)
+        except TypeError:
+            log.error(f"Invalid args, kwargs for signature of {name}: {call_args}, {call_kwargs}")
+            return False
+
+        log.debug(
+            "Running describe.%s in all --  tgt: %s\targs: %s\tkwargs: %s",
+            name,
+            tgt,
+            bound_sig.args,
+            bound_sig.kwargs,
+        )
+
+        try:
+            # This follows the unwritten standard that the minion target must be the first argument
+            __salt__[f"describe.{name}"](*bound_sig.args, **bound_sig.kwargs)
         except TypeError as err:
             log.error(err.args[0])
 
@@ -118,16 +209,17 @@ def top_(tgt, tgt_type="glob", env="base"):
     top_file_dict = {}
 
     with salt.utils.files.fopen(top_file, "r") as fp_:
-        top_file_contents = yaml.safe_load(fp_.read())
+        top_file_dict = yaml.safe_load(fp_.read())
 
     if env not in top_file_dict:
         top_file_dict[env] = {}
 
     for minion in minions:
         add_top = []
-        for files in os.listdir(str(state_file_root / minion)):
-            if files.endswith(".sls") and not files.startswith("init"):
-                add_top.append(minion + "." + files.split(".sls")[0])
+        minion_file_root = state_file_root / minion
+        for file in minion_file_root.iterdir():
+            if file.suffix == ".sls" and file.stem != "init":
+                add_top.append(minion + "." + file.stem)
 
         if minion not in top_file_dict[env]:
             top_file_dict[env][minion] = add_top
@@ -171,9 +263,10 @@ def pillar_top(tgt, tgt_type="glob", env="base"):
 
     for minion in minions:
         add_top = []
-        for files in os.listdir(str(pillar_file_root / minion)):
-            if files.endswith(".sls") and not files.startswith("init"):
-                add_top.append(minion + "." + files.split(".sls")[0])
+        minion_pillar_root = pillar_file_root / minion
+        for file in minion_pillar_root.iterdir():
+            if file.suffix == ".sls" and file.stem != "init":
+                add_top.append(minion + "." + file.stem)
 
         if minion not in top_file_dict[env]:
             top_file_dict[env][minion] = add_top

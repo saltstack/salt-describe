@@ -1,4 +1,3 @@
-import os.path
 import pathlib
 
 import salt.config
@@ -7,42 +6,63 @@ import salt.utils.files
 import yaml
 
 
-def generate_sls(minion, state, sls_name="default"):
-    opts = salt.config.master_config(os.path.join(salt.syspaths.CONFIG_DIR, "master"))
+def get_state_file_root(opts, env="base"):
+    """
+    Get the state file root
+    """
+    return pathlib.Path(opts.get("file_roots").get(env)[0])
 
-    state_file_root = pathlib.Path(opts.get("file_roots").get("base")[0])
 
-    minion_state_root = state_file_root / minion
-    if not os.path.exists(minion_state_root):
-        os.mkdir(minion_state_root)
+def get_minion_state_file_root(opts, minion, env="base"):
+    """
+    Get the state file root for the given minion
+    """
+    return get_state_file_root(opts, env=env) / minion
+
+
+def get_pillar_file_root(opts, env="base"):
+    """
+    Get the pillar root
+    """
+    return pathlib.Path(opts.get("pillar_roots").get(env)[0])
+
+
+def get_minion_pillar_file_root(opts, minion, env="base"):
+    """
+    Get the pillar root for the given minion
+    """
+    return get_pillar_file_root(opts, env=env) / minion
+
+
+def generate_sls(opts, minion, state, sls_name="default", env="base"):
+    """
+    Generate an sls file for the minion with given state contents
+    """
+    minion_state_root = get_minion_state_file_root(opts, minion, env=env)
+    minion_state_root.mkdir(parents=True, exist_ok=True)
 
     minion_state_file = minion_state_root / f"{sls_name}.sls"
 
     with salt.utils.files.fopen(minion_state_file, "w") as fp_:
         fp_.write(state)
 
-    generate_init(minion)
+    generate_init(opts, minion, env=env)
     return True
 
 
-def generate_init(minion=None, env="base"):
+def generate_init(opts, minion=None, env="base"):
     """
     Generate the init.sls for the minion or minions
     """
+    minion_state_root = get_minion_state_file_root(opts, minion, env=env)
+    minion_state_root.mkdir(parents=True, exist_ok=True)
 
-    opts = salt.config.master_config(os.path.join(salt.syspaths.CONFIG_DIR, "master"))
-    state_file_root = opts.get("file_roots").get("base")[0]
-
-    minion_state_root = f"{state_file_root}/{minion}"
-    if not os.path.exists(minion_state_root):
-        os.mkdir(minion_state_root)
-
-    minion_init_file = f"{minion_state_root}/init.sls"
+    minion_init_file = minion_state_root / "init.sls"
 
     include_files = []
-    for file in os.listdir(minion_state_root):
-        if file.endswith(".sls") and file != "init.sls":
-            _file = os.path.splitext(file)[0]
+    for file in minion_state_root.iterdir():
+        if file.suffix == ".sls" and file.stem != "init":
+            _file = file.stem
             include_files.append(f"{minion}.{_file}")
 
     state_contents = {"include": include_files}
@@ -53,23 +73,19 @@ def generate_init(minion=None, env="base"):
     return True
 
 
-def generate_pillar_init(minion=None, env="base"):
+def generate_pillar_init(opts, minion=None, env="base"):
     """
     Generate the init.sls for the minion or minions
     """
-    opts = salt.config.master_config(os.path.join(salt.syspaths.CONFIG_DIR, "master"))
-    pillar_file_root = pathlib.Path(opts.get("pillar_roots").get("base")[0])
+    minion_pillar_root = get_minion_pillar_file_root(opts, minion, env=env)
+    minion_pillar_root.mkdir(parents=True, exist_ok=True)
 
-    minion_pillar_root = pillar_file_root / minion
-    if not os.path.exists(minion_pillar_root):
-        os.mkdir(minion_pillar_root)
-
-    minion_init_file = f"{minion_pillar_root}/init.sls"
+    minion_init_file = minion_pillar_root / "init.sls"
 
     include_files = []
-    for file in os.listdir(minion_pillar_root):
-        if file.endswith(".sls") and file != "init.sls":
-            _file = os.path.splitext(file)[0]
+    for file in minion_pillar_root.iterdir():
+        if file.suffix == ".sls" and file.stem != "init":
+            _file = file.stem
             include_files.append(f"{minion}.{_file}")
 
     pillar_contents = {"include": include_files}
@@ -80,18 +96,17 @@ def generate_pillar_init(minion=None, env="base"):
     return True
 
 
-def generate_pillars(minion, pillar, sls_name="default"):
-    opts = salt.config.master_config(os.path.join(salt.syspaths.CONFIG_DIR, "master"))
-    pillar_file_root = pathlib.Path(opts.get("pillar_roots").get("base")[0])
-
-    minion_pillar_root = pillar_file_root / minion
-    if not os.path.exists(minion_pillar_root):
-        os.mkdir(minion_pillar_root)
+def generate_pillars(opts, minion, pillar, sls_name="default", env="base"):
+    """
+    Generate pillar files for the minion to hold more sensitive information
+    """
+    minion_pillar_root = get_minion_pillar_file_root(opts, minion, env=env)
+    minion_pillar_root.mkdir(parents=True, exist_ok=True)
 
     minion_pillar_file = minion_pillar_root / f"{sls_name}.sls"
 
     with salt.utils.files.fopen(minion_pillar_file, "w") as fp_:
         fp_.write(pillar)
 
-    generate_pillar_init(minion)
+    generate_pillar_init(opts, minion, env=env)
     return True

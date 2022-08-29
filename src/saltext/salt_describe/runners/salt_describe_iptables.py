@@ -58,6 +58,6 @@ def iptables(tgt, tgt_type="glob"):
 
         state = yaml.dump(state_contents)
 
-        generate_sls(minion, state, "iptables")
+        generate_sls(__opts__, minion, state, sls_name="iptables")
 
     return True

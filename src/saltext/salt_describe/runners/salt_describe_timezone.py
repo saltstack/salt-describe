@@ -41,11 +41,10 @@ def timezone(tgt, tgt_type="glob"):
         timezone = timezones[minion]
 
         state_contents = {}
-        state_name = f"{timezone}"
         state_contents = {timezone: {"timezone.system": []}}
 
         state = yaml.dump(state_contents)
 
-        generate_sls(minion, state, "timezone")
+        generate_sls(__opts__, minion, state, sls_name="timezone")
 
     return True

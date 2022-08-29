@@ -165,6 +165,6 @@ def cron(tgt, user="root", include_pre=True, tgt_type="glob"):
                 final_sls[state_name] = sls_contents[state_name]
 
         sls_yaml = yaml.dump(final_sls)
-        generate_sls(minion, sls_yaml, "cron")
+        generate_sls(__opts__, minion, sls_yaml, sls_name="cron")
 
     return True

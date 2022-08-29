@@ -72,6 +72,6 @@ def service(tgt, tgt_type="glob"):
                 state_contents[state_name] = {service_function: []}
 
         state = yaml.dump(state_contents)
-        generate_sls(minion, state, "services")
+        generate_sls(__opts__, minion, state, sls_name="service")
 
     return True
