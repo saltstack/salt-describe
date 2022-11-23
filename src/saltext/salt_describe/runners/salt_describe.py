@@ -52,7 +52,7 @@ def _get_all_single_describe_methods():
 
 
 @_exclude_from_all
-def all_(tgt, top=True, include=None, exclude=None, **kwargs):
+def all_(tgt, top=True, include=None, exclude=None, config_system="salt", **kwargs):
     """
     Run all describe methods against target.
 
@@ -124,6 +124,7 @@ def all_(tgt, top=True, include=None, exclude=None, **kwargs):
         return None, True
 
     kwargs["tgt"] = tgt
+    kwargs["config_system"] = config_system
 
     for name, func in allowed_methods.items():
         sig = signature(func)

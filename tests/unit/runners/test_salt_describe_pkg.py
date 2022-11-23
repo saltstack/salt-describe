@@ -40,6 +40,8 @@ def test_pkg():
     with patch.dict(
         salt_describe_pkg_runner.__salt__, {"salt.execute": MagicMock(return_value=pkg_list)}
     ):
-        with patch.object(salt_describe_pkg_runner, "generate_sls") as generate_mock:
+        with patch.object(salt_describe_pkg_runner, "generate_files") as generate_mock:
             assert salt_describe_pkg_runner.pkg("minion") is True
-            generate_mock.assert_called_with({}, "minion", pkg_sls, sls_name="pkg")
+            generate_mock.assert_called_with(
+                {}, "minion", pkg_sls, sls_name="pkg", config_system="salt"
+            )

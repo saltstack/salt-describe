@@ -7,7 +7,7 @@ Module for building state file
 import logging
 
 import yaml
-from saltext.salt_describe.utils.salt_describe import generate_sls
+from saltext.salt_describe.utils.init import generate_files
 
 __virtualname__ = "describe"
 
@@ -19,7 +19,7 @@ def __virtual__():
     return __virtualname__
 
 
-def service(tgt, tgt_type="glob"):
+def service(tgt, tgt_type="glob", config_system="salt"):
     """
     Gather enabled and disabled services on minions and build a state file.
 
@@ -72,6 +72,6 @@ def service(tgt, tgt_type="glob"):
                 state_contents[state_name] = {service_function: []}
 
         state = yaml.dump(state_contents)
-        generate_sls(__opts__, minion, state, sls_name="service")
+        generate_files(__opts__, minion, state, sls_name="service", config_system=config_system)
 
     return True

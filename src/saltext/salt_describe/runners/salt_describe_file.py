@@ -10,8 +10,8 @@ import pathlib
 
 import salt.utils.files  # pylint: disable=import-error
 import yaml
-from saltext.salt_describe.utils.salt_describe import generate_sls
-from saltext.salt_describe.utils.salt_describe import get_minion_state_file_root
+from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import get_minion_state_file_root
 
 __virtualname__ = "describe"
 
@@ -23,7 +23,7 @@ def __virtual__():
     return __virtualname__
 
 
-def file(tgt, paths, tgt_type="glob"):
+def file(tgt, paths, tgt_type="glob", config_system="salt"):
     """
     Read a file on the minions and build a state file
     to managed a file.
@@ -79,7 +79,7 @@ def file(tgt, paths, tgt_type="glob"):
 
     for minion in list(state_contents.keys()):
         state = yaml.dump(state_contents[minion])
-        minion_state_root = get_minion_state_file_root(__opts__, minion)
+        minion_state_root = get_minion_state_file_root(__opts__, minion, config_system="salt")
 
         for path in file_contents[minion]:
             path_obj = pathlib.Path(path)
@@ -89,6 +89,6 @@ def file(tgt, paths, tgt_type="glob"):
             with salt.utils.files.fopen(path_file, "w") as fp_:
                 fp_.write(file_contents[minion][path])
 
-        generate_sls(__opts__, minion, state, sls_name="files")
+        generate_files(__opts__, minion, state, sls_name="files", config_system=config_system)
 
     return True

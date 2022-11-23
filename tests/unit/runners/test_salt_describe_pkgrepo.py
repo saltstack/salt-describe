@@ -124,10 +124,12 @@ def test_pkgrepo_redhat():
         with patch(
             "salt.utils.minions.get_minion_data", MagicMock(return_value=mock_minion_data)
         ) as minion_data_mock:
-            with patch.object(salt_describe_pkgrepo_runner, "generate_sls") as generate_mock:
+            with patch.object(salt_describe_pkgrepo_runner, "generate_files") as generate_mock:
                 assert salt_describe_pkgrepo_runner.pkgrepo("minion") is True
                 minion_data_mock.assert_called_with("minion", {})
-                generate_mock.assert_called_with({}, "minion", redhat_sls, sls_name="pkgrepo")
+                generate_mock.assert_called_with(
+                    {}, "minion", redhat_sls, sls_name="pkgrepo", config_system="salt"
+                )
 
 
 def test_pkgrepo_debian():
@@ -532,7 +534,9 @@ def test_pkgrepo_debian():
         with patch(
             "salt.utils.minions.get_minion_data", MagicMock(return_value=mock_minion_data)
         ) as minion_data_mock:
-            with patch.object(salt_describe_pkgrepo_runner, "generate_sls") as generate_mock:
+            with patch.object(salt_describe_pkgrepo_runner, "generate_files") as generate_mock:
                 assert salt_describe_pkgrepo_runner.pkgrepo("minion") is True
                 minion_data_mock.assert_called_with("minion", {})
-                generate_mock.assert_called_with({}, "minion", debian_sls, sls_name="pkgrepo")
+                generate_mock.assert_called_with(
+                    {}, "minion", debian_sls, sls_name="pkgrepo", config_system="salt"
+                )

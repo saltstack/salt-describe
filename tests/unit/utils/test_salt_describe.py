@@ -40,7 +40,7 @@ def test_get_minion_pillar_file_root(tmp_path):
         )
 
 
-def test_generate_sls(tmp_path):
+def test_generate_files(tmp_path):
     state_contents = {
         "salt://testfile": {
             "file.managed": {
@@ -55,7 +55,7 @@ def test_generate_sls(tmp_path):
     ):
         with patch.object(salt_describe_util, "generate_init", MagicMock()) as init_mock:
             assert (
-                salt_describe_util.generate_sls({}, "minion", state, sls_name="file", env="prod")
+                salt_describe_util.generate_files({}, "minion", state, sls_name="file", env="prod")
                 is True
             )
             sls_file = minion_state_root / "file.sls"

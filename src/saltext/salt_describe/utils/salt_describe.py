@@ -34,7 +34,7 @@ def get_minion_pillar_file_root(opts, minion, env="base"):
     return get_pillar_file_root(opts, env=env) / minion
 
 
-def generate_sls(opts, minion, state, sls_name="default", env="base"):
+def generate_files(opts, minion, state, sls_name="default", env="base"):
     """
     Generate an sls file for the minion with given state contents
     """

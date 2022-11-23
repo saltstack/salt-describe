@@ -7,7 +7,7 @@ Module for building state file
 import logging
 
 import yaml
-from saltext.salt_describe.utils.salt_describe import generate_sls
+from saltext.salt_describe.utils.init import generate_files
 
 __virtualname__ = "describe"
 
@@ -70,7 +70,7 @@ def _parse_pre_cron(line, user, commented_cron_job=False):
     return "unknown", None, line
 
 
-def cron(tgt, user="root", include_pre=True, tgt_type="glob"):
+def cron(tgt, user="root", include_pre=True, tgt_type="glob", config_system="salt"):
     """
     Generate the state file for a user's cron data
 
@@ -165,6 +165,6 @@ def cron(tgt, user="root", include_pre=True, tgt_type="glob"):
                 final_sls[state_name] = sls_contents[state_name]
 
         sls_yaml = yaml.dump(final_sls)
-        generate_sls(__opts__, minion, sls_yaml, sls_name="cron")
+        generate_files(__opts__, minion, sls_yaml, sls_name="cron", config_system=config_system)
 
     return True

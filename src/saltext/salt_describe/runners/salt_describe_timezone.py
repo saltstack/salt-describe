@@ -7,7 +7,7 @@ Module for building state file
 import logging
 
 import yaml
-from saltext.salt_describe.utils.salt_describe import generate_sls
+from saltext.salt_describe.utils.init import generate_files
 
 __virtualname__ = "describe"
 
@@ -19,7 +19,7 @@ def __virtual__():
     return __virtualname__
 
 
-def timezone(tgt, tgt_type="glob"):
+def timezone(tgt, tgt_type="glob", config_system="salt"):
     """
     Gather the timezone data for minions and generate a state file.
 
@@ -45,6 +45,6 @@ def timezone(tgt, tgt_type="glob"):
 
         state = yaml.dump(state_contents)
 
-        generate_sls(__opts__, minion, state, sls_name="timezone")
+        generate_files(__opts__, minion, state, sls_name="timezone", config_system=config_system)
 
     return True

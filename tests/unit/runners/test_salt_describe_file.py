@@ -48,7 +48,7 @@ def test_file(tmp_path):
     with patch.dict(
         salt_describe_file_runner.__salt__, {"salt.execute": MagicMock(side_effect=execute_retvals)}
     ):
-        with patch.object(salt_describe_file_runner, "generate_sls") as generate_mock:
+        with patch.object(salt_describe_file_runner, "generate_files") as generate_mock:
             with patch.object(
                 salt_describe_file_runner,
                 "get_minion_state_file_root",
@@ -56,6 +56,8 @@ def test_file(tmp_path):
             ) as get_minion_root_mock:
                 with patch("salt.utils.files.fopen", mock_open()) as open_mock:
                     assert salt_describe_file_runner.file("minion", str(testfile)) is True
-                    generate_mock.assert_called_with({}, "minion", file_sls, sls_name="files")
-                    get_minion_root_mock.assert_called_with({}, "minion")
+                    generate_mock.assert_called_with(
+                        {}, "minion", file_sls, sls_name="files", config_system="salt"
+                    )
+                    get_minion_root_mock.assert_called_with({}, "minion", config_system="salt")
                     open_mock().write.assert_called_with("contents of testfile")

@@ -7,7 +7,7 @@ Module for building state file
 import logging
 
 import yaml
-from saltext.salt_describe.utils.salt_describe import generate_sls
+from saltext.salt_describe.utils.init import generate_files
 
 __virtualname__ = "describe"
 
@@ -19,7 +19,7 @@ def __virtual__():
     return __virtualname__
 
 
-def pkg(tgt, tgt_type="glob", include_version=True, single_state=True):
+def pkg(tgt, tgt_type="glob", include_version=True, single_state=True, config_system="salt"):
     """
     Gather installed pkgs on minions and build a state file.
 
@@ -59,6 +59,6 @@ def pkg(tgt, tgt_type="glob", include_version=True, single_state=True):
                     state_contents[state_name] = {"pkg.installed": [{"name": name}]}
             state = yaml.dump(state_contents)
 
-        generate_sls(__opts__, minion, state, sls_name="pkg")
+        generate_files(__opts__, minion, state, sls_name="pkg", config_system=config_system)
 
     return True
