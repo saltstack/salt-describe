@@ -53,23 +53,67 @@ def service(tgt, tgt_type="glob", config_system="salt"):
     for minion in list(service_status.keys()):
         _services = service_status[minion]
 
-        state_contents = {}
-        for service, status in _services.items():
-            state_name = f"{service}"
-            _enabled = service in enabled_services.get(minion)
-            _disabled = service in disabled_services.get(minion)
+        if config_system == "salt":
+            state_contents = {}
+            for service, status in _services.items():
+                state_name = f"{service}"
+                _enabled = service in enabled_services.get(minion)
+                _disabled = service in disabled_services.get(minion)
 
-            if status:
-                service_function = "service.running"
-            else:
-                service_function = "service.dead"
+                if status:
+                    service_function = "service.running"
+                else:
+                    service_function = "service.dead"
 
-            if _enabled:
-                state_contents[state_name] = {service_function: [{"enable": True}]}
-            elif _disabled:
-                state_contents[state_name] = {service_function: [{"enable": False}]}
-            else:
-                state_contents[state_name] = {service_function: []}
+                if _enabled:
+                    state_contents[state_name] = {service_function: [{"enable": True}]}
+                elif _disabled:
+                    state_contents[state_name] = {service_function: [{"enable": False}]}
+                else:
+                    state_contents[state_name] = {service_function: []}
+        elif config_system == "ansible":
+
+            state_contents = []
+            data = {}
+            data["name"] = "Manage Services"
+            data["hosts"] = minion
+            data["tasks"] = []
+
+            for service, status in _services.items():
+                if "@" in service:
+                    continue
+                state_name = f"{service}"
+                _enabled = service in enabled_services.get(minion)
+                _disabled = service in disabled_services.get(minion)
+
+                if status:
+                    service_function = "started"
+                else:
+                    service_function = "stopped"
+
+                if _enabled:
+                    data["tasks"].append(
+                        {
+                            "name": f"Manage service {service}",
+                            "service": {
+                                "state": service_function,
+                                "name": service,
+                                "enabled": "yes",
+                            },
+                        }
+                    )
+                elif _disabled:
+                    data["tasks"].append(
+                        {
+                            "name": f"Manage service {service}",
+                            "service": {
+                                "state": service_function,
+                                "name": service,
+                                "enabled": "no",
+                            },
+                        }
+                    )
+            state_contents.append(data)
 
         state = yaml.dump(state_contents)
         generate_files(__opts__, minion, state, sls_name="service", config_system=config_system)
