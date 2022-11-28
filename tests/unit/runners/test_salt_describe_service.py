@@ -52,6 +52,8 @@ def test_service():
         salt_describe_service_runner.__salt__,
         {"salt.execute": MagicMock(side_effect=execute_retvals)},
     ):
-        with patch.object(salt_describe_service_runner, "generate_sls") as generate_mock:
+        with patch.object(salt_describe_service_runner, "generate_files") as generate_mock:
             assert salt_describe_service_runner.service("minion") is True
-            generate_mock.assert_called_with({}, "minion", service_sls, sls_name="service")
+            generate_mock.assert_called_with(
+                {}, "minion", service_sls, sls_name="service", config_system="salt"
+            )

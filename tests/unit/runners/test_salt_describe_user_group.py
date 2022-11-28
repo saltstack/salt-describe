@@ -48,9 +48,11 @@ def test_group():
     with patch.dict(
         salt_describe_user_runner.__salt__, {"salt.execute": MagicMock(return_value=group_getent)}
     ):
-        with patch.object(salt_describe_user_runner, "generate_sls") as generate_mock:
+        with patch.object(salt_describe_user_runner, "generate_files") as generate_mock:
             assert salt_describe_user_runner.group("minion") is True
-            generate_mock.assert_called_with({}, "minion", group_sls, sls_name="groups")
+            generate_mock.assert_called_with(
+                {}, "minion", group_sls, sls_name="groups", config_system="salt"
+            )
 
 
 def test_user():
@@ -122,12 +124,14 @@ def test_user():
         salt_describe_user_runner.__salt__,
         {"salt.execute": MagicMock(side_effect=[user_getent, user_shadow, fileexists])},
     ):
-        with patch.object(salt_describe_user_runner, "generate_sls") as generate_sls_mock:
+        with patch.object(salt_describe_user_runner, "generate_files") as generate_files_mock:
             with patch.object(
                 salt_describe_user_runner, "generate_pillars"
             ) as generate_pillars_mock:
                 assert salt_describe_user_runner.user("minion") is True
-                generate_sls_mock.assert_called_with({}, "minion", user_sls, sls_name="users")
+                generate_files_mock.assert_called_with(
+                    {}, "minion", user_sls, sls_name="users", config_system="salt"
+                )
                 generate_pillars_mock.assert_called_with(
                     {}, "minion", user_pillar, sls_name="users"
                 )

@@ -36,6 +36,8 @@ def test_pip():
     with patch.dict(
         salt_describe_pip_runner.__salt__, {"salt.execute": MagicMock(return_value=pip_list)}
     ):
-        with patch.object(salt_describe_pip_runner, "generate_sls") as generate_mock:
+        with patch.object(salt_describe_pip_runner, "generate_files") as generate_mock:
             assert salt_describe_pip_runner.pip("minion") is True
-            generate_mock.assert_called_with({}, "minion", expected_sls_write, sls_name="pip")
+            generate_mock.assert_called_with(
+                {}, "minion", expected_sls_write, sls_name="pip", config_system="salt"
+            )

@@ -7,7 +7,7 @@ Module for building state file
 import logging
 
 import yaml
-from saltext.salt_describe.utils.salt_describe import generate_sls
+from saltext.salt_describe.utils.init import generate_files
 
 __virtualname__ = "describe"
 
@@ -19,7 +19,7 @@ def __virtual__():
     return __virtualname__
 
 
-def pip(tgt, tgt_type="glob", bin_env=None):
+def pip(tgt, tgt_type="glob", bin_env=None, config_system="salt"):
     """
     Gather installed pip libraries and build a state file.
 
@@ -51,6 +51,6 @@ def pip(tgt, tgt_type="glob", bin_env=None):
 
         state = yaml.dump(state_contents)
 
-        generate_sls(__opts__, minion, state, sls_name="pip")
+        generate_files(__opts__, minion, state, sls_name="pip", config_system=config_system)
 
     return True

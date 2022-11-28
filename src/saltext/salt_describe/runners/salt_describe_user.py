@@ -7,8 +7,8 @@ Module for building state file
 import logging
 
 import yaml
+from saltext.salt_describe.utils.init import generate_files
 from saltext.salt_describe.utils.salt_describe import generate_pillars
-from saltext.salt_describe.utils.salt_describe import generate_sls
 
 __virtualname__ = "describe"
 
@@ -20,7 +20,7 @@ def __virtual__():
     return __virtualname__
 
 
-def user(tgt, require_groups=False, tgt_type="glob"):
+def user(tgt, require_groups=False, tgt_type="glob", config_system="salt"):
     """
     read users on the minions and build a state file
     to manage the users.
@@ -92,12 +92,12 @@ def user(tgt, require_groups=False, tgt_type="glob"):
 
         state = yaml.dump(state_contents)
         pillars = yaml.dump(pillars)
-        generate_sls(__opts__, minion, state, sls_name="users")
+        generate_files(__opts__, minion, state, sls_name="users", config_system=config_system)
         generate_pillars(__opts__, minion, pillars, sls_name="users")
     return True
 
 
-def group(tgt, include_members=False, tgt_type="glob"):
+def group(tgt, include_members=False, tgt_type="glob", config_system="salt"):
     """
     read groups on the minions and build a state file
     to managed th groups.
@@ -125,6 +125,6 @@ def group(tgt, include_members=False, tgt_type="glob"):
 
         state = yaml.dump(state_contents)
 
-        generate_sls(__opts__, minion, state, sls_name="groups")
+        generate_files(__opts__, minion, state, sls_name="groups", config_system=config_system)
 
     return True
