@@ -5,6 +5,7 @@ Module for building state file
 
 """
 import logging
+import sys
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
@@ -19,7 +20,86 @@ def __virtual__():
     return __virtualname__
 
 
-def service(tgt, tgt_type="glob", config_system="salt"):
+def _parse_salt(minion, service_status, enabled_services, disabled_services, **kwargs):
+    """
+    Parse the returned service commands and return
+    salt data.
+    """
+    _services = service_status[minion]
+    state_contents = {}
+    for service, status in _services.items():
+        state_name = f"{service}"
+        _enabled = service in enabled_services.get(minion)
+        _disabled = service in disabled_services.get(minion)
+
+        if status:
+            service_function = "service.running"
+        else:
+            service_function = "service.dead"
+
+        if _enabled:
+            state_contents[state_name] = {service_function: [{"enable": True}]}
+        elif _disabled:
+            state_contents[state_name] = {service_function: [{"enable": False}]}
+        else:
+            state_contents[state_name] = {service_function: []}
+    return state_contents
+
+
+def _parse_ansible(minion, service_status, enabled_services, disabled_services, **kwargs):
+    """
+    Parse the returned service commands and return
+    ansible data.
+    """
+    _services = service_status[minion]
+    data = {"name": "Manage Service", "tasks": []}
+    if not kwargs.get("hosts"):
+        log.error(
+            "Hosts was not passed. You will need to manually edit the playbook with the hosts entry"
+        )
+    else:
+        data["hosts"] = kwargs.get("hosts")
+    state_contents = []
+
+    for service, status in _services.items():
+        if "@" in service:
+            continue
+        state_name = f"{service}"
+        _enabled = service in enabled_services.get(minion)
+        _disabled = service in disabled_services.get(minion)
+
+        if status:
+            service_function = "started"
+        else:
+            service_function = "stopped"
+
+        if _enabled:
+            data["tasks"].append(
+                {
+                    "name": f"Manage service {service}",
+                    "service": {
+                        "state": service_function,
+                        "name": service,
+                        "enabled": "yes",
+                    },
+                }
+            )
+        elif _disabled:
+            data["tasks"].append(
+                {
+                    "name": f"Manage service {service}",
+                    "service": {
+                        "state": service_function,
+                        "name": service,
+                        "enabled": "no",
+                    },
+                }
+            )
+    state_contents.append(data)
+    return state_contents
+
+
+def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
     """
     Gather enabled and disabled services on minions and build a state file.
 
@@ -29,6 +109,12 @@ def service(tgt, tgt_type="glob", config_system="salt"):
 
         salt-run describe.service minion-tgt
 
+    If you want to generate ansible playbooks you need to pass in
+    `config_system` and `hosts`
+
+    .. code-block:: bash
+
+        salt-run describe.service minion-tgt config_system=ansible hosts=hostgroup
     """
 
     enabled_services = __salt__["salt.execute"](
@@ -51,70 +137,9 @@ def service(tgt, tgt_type="glob", config_system="salt"):
     )
 
     for minion in list(service_status.keys()):
-        _services = service_status[minion]
-
-        if config_system == "salt":
-            state_contents = {}
-            for service, status in _services.items():
-                state_name = f"{service}"
-                _enabled = service in enabled_services.get(minion)
-                _disabled = service in disabled_services.get(minion)
-
-                if status:
-                    service_function = "service.running"
-                else:
-                    service_function = "service.dead"
-
-                if _enabled:
-                    state_contents[state_name] = {service_function: [{"enable": True}]}
-                elif _disabled:
-                    state_contents[state_name] = {service_function: [{"enable": False}]}
-                else:
-                    state_contents[state_name] = {service_function: []}
-        elif config_system == "ansible":
-
-            state_contents = []
-            data = {}
-            data["name"] = "Manage Services"
-            data["hosts"] = minion
-            data["tasks"] = []
-
-            for service, status in _services.items():
-                if "@" in service:
-                    continue
-                state_name = f"{service}"
-                _enabled = service in enabled_services.get(minion)
-                _disabled = service in disabled_services.get(minion)
-
-                if status:
-                    service_function = "started"
-                else:
-                    service_function = "stopped"
-
-                if _enabled:
-                    data["tasks"].append(
-                        {
-                            "name": f"Manage service {service}",
-                            "service": {
-                                "state": service_function,
-                                "name": service,
-                                "enabled": "yes",
-                            },
-                        }
-                    )
-                elif _disabled:
-                    data["tasks"].append(
-                        {
-                            "name": f"Manage service {service}",
-                            "service": {
-                                "state": service_function,
-                                "name": service,
-                                "enabled": "no",
-                            },
-                        }
-                    )
-            state_contents.append(data)
-
+        state_contents = getattr(sys.modules[__name__], f"_parse_{config_system}")(
+            minion, service_status, enabled_services, disabled_services, **kwargs
+        )
         state = yaml.dump(state_contents)
         generate_files(__opts__, minion, state, sls_name="service", config_system=config_system)
 

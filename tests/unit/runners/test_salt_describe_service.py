@@ -57,3 +57,53 @@ def test_service():
             generate_mock.assert_called_with(
                 {}, "minion", service_sls, sls_name="service", config_system="salt"
             )
+
+
+def test_service_ansible():
+    enabled_retval = {"minion": ["salt-master", "salt-api"]}
+    disabled_retval = {"minion": ["salt-minion"]}
+    hosts = "testgroup"
+    status_retval = {
+        "minion": {
+            "salt-master": True,
+            "salt-minion": True,
+            "salt-api": False,
+            "random-service": True,
+        },
+    }
+
+    service_yml_contents = [
+        {
+            "name": "Manage Service",
+            "tasks": [
+                {
+                    "name": "Manage service salt-master",
+                    "service": {"state": "started", "name": "salt-master", "enabled": "yes"},
+                },
+                {
+                    "name": "Manage service salt-minion",
+                    "service": {"state": "started", "name": "salt-minion", "enabled": "no"},
+                },
+                {
+                    "name": "Manage service salt-api",
+                    "service": {"state": "stopped", "name": "salt-api", "enabled": "yes"},
+                },
+            ],
+            "hosts": "testgroup",
+        }
+    ]
+    service_yml = yaml.dump(service_yml_contents)
+
+    execute_retvals = [enabled_retval, disabled_retval, status_retval]
+    with patch.dict(
+        salt_describe_service_runner.__salt__,
+        {"salt.execute": MagicMock(side_effect=execute_retvals)},
+    ):
+        with patch.object(salt_describe_service_runner, "generate_files") as generate_mock:
+            assert (
+                salt_describe_service_runner.service("minion", config_system="ansible", hosts=hosts)
+                is True
+            )
+            generate_mock.assert_called_with(
+                {}, "minion", service_yml, sls_name="service", config_system="ansible"
+            )
