@@ -57,7 +57,6 @@ def _parse_ansible(minion, pkgs, single_state, include_version, pkg_cmd, **kwarg
         )
     else:
         data["hosts"] = kwargs.get("hosts")
-    breakpoint()
     if single_state:
         _pkgs = list(pkgs.keys())
         data["tasks"].append(
