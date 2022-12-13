@@ -103,7 +103,7 @@ def _parse_chef(minion, pkgs, single_state, include_version, pkg_cmd, **kwargs):
     for name, version in pkgs.items():
         pkg_template = f"""package '{name}' do
   action :install
-+end
+end
 """
         _contents.append(pkg_template)
     return _contents
