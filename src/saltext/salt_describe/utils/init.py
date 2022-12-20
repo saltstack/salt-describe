@@ -1,5 +1,10 @@
+import logging
+
 import saltext.salt_describe.utils.ansible_describe
 import saltext.salt_describe.utils.salt_describe
+
+
+log = logging.getLogger(__name__)
 
 
 def generate_files(opts, minion, state, sls_name="default", env="base", config_system="salt"):
@@ -18,3 +23,10 @@ def get_minion_state_file_root(opts, minion, env="base", config_system="salt"):
     config = getattr(saltext.salt_describe.utils, f"{config_system}_describe")
 
     return config.get_minion_state_file_root(opts, minion, env=env)
+
+
+def ret_info(sls_files):
+    if not sls_files:
+        log.error("SLS file not generated")
+        return False
+    return {"Generated SLS file locations": sls_files}

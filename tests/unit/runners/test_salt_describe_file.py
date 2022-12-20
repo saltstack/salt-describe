@@ -55,7 +55,7 @@ def test_file(tmp_path):
                 return_value=tmp_path / "file_roots" / "minion",
             ) as get_minion_root_mock:
                 with patch("salt.utils.files.fopen", mock_open()) as open_mock:
-                    assert salt_describe_file_runner.file("minion", str(testfile)) is True
+                    assert "Generated SLS file locations" in salt_describe_file_runner.file("minion", str(testfile))
                     generate_mock.assert_called_with(
                         {}, "minion", file_sls, sls_name="files", config_system="salt"
                     )

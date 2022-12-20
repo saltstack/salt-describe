@@ -49,7 +49,7 @@ def test_group():
         salt_describe_user_runner.__salt__, {"salt.execute": MagicMock(return_value=group_getent)}
     ):
         with patch.object(salt_describe_user_runner, "generate_files") as generate_mock:
-            assert salt_describe_user_runner.group("minion") is True
+            assert "Generated SLS file locations" in salt_describe_user_runner.group("minion")
             generate_mock.assert_called_with(
                 {}, "minion", group_sls, sls_name="groups", config_system="salt"
             )
@@ -128,7 +128,7 @@ def test_user():
             with patch.object(
                 salt_describe_user_runner, "generate_pillars"
             ) as generate_pillars_mock:
-                assert salt_describe_user_runner.user("minion") is True
+                assert "Generated SLS file locations" in salt_describe_user_runner.user("minion")
                 generate_files_mock.assert_called_with(
                     {}, "minion", user_sls, sls_name="users", config_system="salt"
                 )

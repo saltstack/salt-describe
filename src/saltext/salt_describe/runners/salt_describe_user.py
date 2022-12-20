@@ -8,6 +8,7 @@ import logging
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import ret_info
 from saltext.salt_describe.utils.salt_describe import generate_pillars
 
 __virtualname__ = "describe"
@@ -43,6 +44,7 @@ def user(tgt, require_groups=False, tgt_type="glob", config_system="salt"):
     )
 
     pillars = {"users": {}}
+    sls_files = []
     for minion in list(users.keys()):
         for user in users[minion]:
             shadow = __salt__["salt.execute"](
@@ -92,9 +94,11 @@ def user(tgt, require_groups=False, tgt_type="glob", config_system="salt"):
 
         state = yaml.dump(state_contents)
         pillars = yaml.dump(pillars)
-        generate_files(__opts__, minion, state, sls_name="users", config_system=config_system)
+        sls_files.append(str(generate_files(__opts__, minion, state,
+                                            sls_name="users",
+                                            config_system=config_system)))
         generate_pillars(__opts__, minion, pillars, sls_name="users")
-    return True
+    return ret_info(sls_files)
 
 
 def group(tgt, include_members=False, tgt_type="glob", config_system="salt"):
@@ -115,6 +119,7 @@ def group(tgt, include_members=False, tgt_type="glob", config_system="salt"):
     )
 
     state_contents = {}
+    sls_files = []
     for minion in list(groups.keys()):
         for group in groups[minion]:
             groupname = group["name"]
@@ -125,6 +130,8 @@ def group(tgt, include_members=False, tgt_type="glob", config_system="salt"):
 
         state = yaml.dump(state_contents)
 
-        generate_files(__opts__, minion, state, sls_name="groups", config_system=config_system)
+        sls_files.append(str(generate_files(__opts__, minion, state,
+                                            sls_name="groups",
+                                            config_system=config_system)))
 
-    return True
+    return ret_info(sls_files)

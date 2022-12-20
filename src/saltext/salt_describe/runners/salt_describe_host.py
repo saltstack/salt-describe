@@ -8,6 +8,7 @@ import logging
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import ret_info
 
 __virtualname__ = "describe"
 
@@ -36,6 +37,7 @@ def host(tgt, tgt_type="glob", config_system="salt"):
         tgt_type=tgt_type,
     )
 
+    sls_files = []
     for minion in list(ret.keys()):
         content = ret[minion]
         count = 0
@@ -52,6 +54,8 @@ def host(tgt, tgt_type="glob", config_system="salt"):
                 count += 1
 
         state = yaml.dump(state_contents)
-        generate_files(__opts__, minion, state, sls_name="host", config_system=config_system)
+        sls_files.append(str(generate_files(__opts__, minion, state,
+                                            sls_name="host",
+                                            config_system=config_system)))
 
-    return True
+    return ret_info(sls_files)

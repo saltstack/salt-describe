@@ -9,6 +9,7 @@ import sys
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import ret_info
 
 __virtualname__ = "describe"
 
@@ -77,6 +78,7 @@ def pip(tgt, tgt_type="glob", bin_env=None, config_system="salt", **kwargs):
         bin_env=bin_env,
     )
 
+    sls_files = []
     for minion in list(ret.keys()):
         minion_pip_list = ret[minion]
         state_contents = getattr(sys.modules[__name__], f"_parse_{config_system}")(
@@ -84,6 +86,8 @@ def pip(tgt, tgt_type="glob", bin_env=None, config_system="salt", **kwargs):
         )
         state = yaml.dump(state_contents)
 
-        generate_files(__opts__, minion, state, sls_name="pip", config_system=config_system)
+        sls_files.append(str(generate_files(__opts__, minion, state,
+                                            sls_name="pip",
+                                            config_system=config_system)))
 
-    return True
+    return ret_info(sls_files)
