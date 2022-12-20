@@ -54,11 +54,10 @@ def test_generate_files(tmp_path):
         salt_describe_util, "get_minion_state_file_root", return_value=minion_state_root
     ):
         with patch.object(salt_describe_util, "generate_init", MagicMock()) as init_mock:
+            sls_file = minion_state_root / "file.sls"
             assert (
                 salt_describe_util.generate_files({}, "minion", state, sls_name="file", env="prod")
-                is True
-            )
-            sls_file = minion_state_root / "file.sls"
+            ) == sls_file
             assert sls_file.exists()
             assert yaml.safe_load(sls_file.read_text()) == state_contents
             init_mock.assert_called_with({}, "minion", env="prod")
