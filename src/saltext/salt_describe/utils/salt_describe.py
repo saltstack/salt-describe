@@ -47,7 +47,7 @@ def generate_files(opts, minion, state, sls_name="default", env="base"):
         fp_.write(state)
 
     generate_init(opts, minion, env=env)
-    return True
+    return minion_state_file
 
 
 def generate_init(opts, minion=None, env="base"):

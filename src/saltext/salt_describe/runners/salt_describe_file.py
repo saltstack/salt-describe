@@ -11,6 +11,7 @@ import pathlib
 import salt.utils.files  # pylint: disable=import-error
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import ret_info
 from saltext.salt_describe.utils.init import get_minion_state_file_root
 
 __virtualname__ = "describe"
@@ -77,6 +78,7 @@ def file(tgt, paths, tgt_type="glob", config_system="salt"):
                 ]
             }
 
+    sls_files = []
     for minion in list(state_contents.keys()):
         state = yaml.dump(state_contents[minion])
         minion_state_root = get_minion_state_file_root(__opts__, minion, config_system="salt")
@@ -89,6 +91,8 @@ def file(tgt, paths, tgt_type="glob", config_system="salt"):
             with salt.utils.files.fopen(path_file, "w") as fp_:
                 fp_.write(file_contents[minion][path])
 
-        generate_files(__opts__, minion, state, sls_name="files", config_system=config_system)
+        sls_files.append(str(generate_files(__opts__, minion, state,
+                                        sls_name="files",
+                                        config_system=config_system)))
 
-    return True
+    return ret_info(sls_files)

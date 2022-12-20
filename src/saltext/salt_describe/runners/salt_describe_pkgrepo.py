@@ -10,6 +10,7 @@ import re
 import salt.utils.minions  # pylint: disable=import-error
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import ret_info
 
 
 __virtualname__ = "describe"
@@ -39,7 +40,7 @@ def pkgrepo(tgt, tgt_type="glob", config_system="salt"):
         "pkg.list_repos",
         tgt_type=tgt_type,
     )
-
+    sls_files = []
     for minion in list(pkgrepos.keys()):
         _, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
 
@@ -106,6 +107,8 @@ def pkgrepo(tgt, tgt_type="glob", config_system="salt"):
 
         state = yaml.dump(state_contents)
 
-        generate_files(__opts__, minion, state, sls_name=state_name, config_system=config_system)
+        sls_files.append(str(generate_files(__opts__, minion, state,
+                                            sls_name=state_name,
+                                            config_system=config_system)))
 
-    return True
+    return ret_info(sls_files)

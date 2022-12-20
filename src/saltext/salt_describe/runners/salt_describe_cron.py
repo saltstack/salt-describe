@@ -8,6 +8,7 @@ import logging
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import ret_info
 
 __virtualname__ = "describe"
 
@@ -86,6 +87,7 @@ def cron(tgt, user="root", include_pre=True, tgt_type="glob", config_system="sal
         arg=[user],
         tgt_type=tgt_type,
     )
+    sls_files = []
     for minion in list(cron_contents.keys()):
         minion_crons = cron_contents[minion]
         crons = minion_crons.get("crons", [])
@@ -165,6 +167,8 @@ def cron(tgt, user="root", include_pre=True, tgt_type="glob", config_system="sal
                 final_sls[state_name] = sls_contents[state_name]
 
         sls_yaml = yaml.dump(final_sls)
-        generate_files(__opts__, minion, sls_yaml, sls_name="cron", config_system=config_system)
+        sls_files.append(str(generate_files(__opts__, minion, sls_yaml,
+                                            sls_name="cron",
+                                            config_system=config_system)))
 
-    return True
+    return ret_info(sls_files)
