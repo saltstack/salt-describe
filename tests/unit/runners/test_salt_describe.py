@@ -24,7 +24,7 @@ def configure_loader_modules():
     }
 
 
-def test_all():
+def test_all(tmp_path):
     """
     test describe.all
     """
@@ -32,6 +32,11 @@ def test_all():
     file_mock = create_autospec(salt_describe_file_runner.file)
     pip_mock = create_autospec(salt_describe_pip_runner.pip)
     pkg_mock = create_autospec(salt_describe_pkg_runner.pkg)
+
+    cron_mock.return_value = {"generate": [str(tmp_path / "cron.sls")]}
+    file_mock.return_value = {"generate": [str(tmp_path / "file.sls")]}
+    pip_mock.return_value = {"generate": [str(tmp_path / "pip.sls")]}
+    pkg_mock.return_value = {"generate": [str(tmp_path / "pkg.sls")]}
 
     all_methods = {
         "cron": cron_mock,
@@ -60,7 +65,7 @@ def test_all():
         with patch.dict(salt_describe_runner.__salt__, dunder_salt_mock):
             with patch.object(salt_describe_runner, "signature", side_effect=inspect_retvals):
                 exclude = ["cron", "pkg"]
-                assert (
+                assert "Generated SLS file locations" in (
                     salt_describe_runner.all_(
                         "minion",
                         top=False,
@@ -68,7 +73,6 @@ def test_all():
                         file_paths="/fake/path",
                         bin_env="fake-env",
                     )
-                    is True
                 )
                 cron_mock.assert_not_called()
                 file_mock.assert_called_with("minion", "/fake/path", "salt")
@@ -77,7 +81,7 @@ def test_all():
 
             with patch.object(salt_describe_runner, "signature", side_effect=inspect_retvals):
                 include = ["pip", "file"]
-                assert (
+                assert "Generated SLS file locations" in (
                     salt_describe_runner.all_(
                         "minion",
                         top=False,
@@ -85,7 +89,6 @@ def test_all():
                         paths="/fake/path",
                         pip_bin_env="fake-env",
                     )
-                    is True
                 )
                 cron_mock.assert_not_called()
                 file_mock.assert_called_with("minion", "/fake/path", "salt")
