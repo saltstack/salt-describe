@@ -125,3 +125,44 @@ def test_pkg_ansible():
                 generate_mock.assert_called_with(
                     {}, "minion", pkg_yml, sls_name="pkg", config_system="ansible"
                 )
+
+
+def test_pkg_chef():
+    pkg_list = {
+        "minion": {
+            "pkg1": "0.1.2-3",
+            "pkg2": "1.2rc5-3",
+            "pkg3": "2.3.4-5",
+            "pk4": "3.4-5",
+            "pkg5": "4.5.6-7",
+        }
+    }
+    pkg_rb_contents = """package 'pkg1' do
+  action :install
+end
+
+package 'pkg2' do
+  action :install
+end
+
+package 'pkg3' do
+  action :install
+end
+
+package 'pk4' do
+  action :install
+end
+
+package 'pkg5' do
+  action :install
+end
+"""
+
+    with patch.dict(
+        salt_describe_pkg_runner.__salt__, {"salt.execute": MagicMock(return_value=pkg_list)}
+    ):
+        with patch.object(salt_describe_pkg_runner, "generate_files") as generate_mock:
+            assert salt_describe_pkg_runner.pkg("minion", config_system="chef") is True
+            generate_mock.assert_called_with(
+                {}, "minion", pkg_rb_contents, sls_name="pkg", config_system="chef"
+            )

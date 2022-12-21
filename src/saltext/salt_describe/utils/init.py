@@ -1,6 +1,7 @@
 import logging
 
 import saltext.salt_describe.utils.ansible_describe
+import saltext.salt_describe.utils.chef_describe
 import saltext.salt_describe.utils.salt_describe
 
 

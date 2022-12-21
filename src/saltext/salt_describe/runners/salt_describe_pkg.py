@@ -94,6 +94,22 @@ def _parse_ansible(minion, pkgs, single_state, include_version, pkg_cmd, **kwarg
     return state_contents
 
 
+def _parse_chef(minion, pkgs, single_state, include_version, pkg_cmd, **kwargs):
+    """
+    Parse the returned pkg commands and return
+    chef data.
+    """
+
+    _contents = []
+    for name, version in pkgs.items():
+        pkg_template = f"""package '{name}' do
+  action :install
+end
+"""
+        _contents.append(pkg_template)
+    return _contents
+
+
 def pkg(
     tgt, tgt_type="glob", include_version=True, single_state=True, config_system="salt", **kwargs
 ):
@@ -106,6 +122,9 @@ def pkg(
 
         salt-run describe.pkg minion-tgt
 
+        salt-run describe.pkg minion-tgt config_system=ansible
+
+        salt-run describe.pkg minion-tgt config_system=chef
     """
 
     ret = __salt__["salt.execute"](
@@ -135,9 +154,13 @@ def pkg(
             minion, pkgs, single_state, include_version, pkg_cmd, **kwargs
         )
 
-        state = yaml.dump(state_contents)
-        sls_files.append(str(generate_files(__opts__, minion, state,
-                                        sls_name="pkg",
-                                        config_system=config_system)))
-
+        if config_system in ("ansible", "salt"):
+            state = yaml.dump(state_contents)
+        else:
+            state = "\n".join(state_contents)
+        sls_files.append(
+            str(
+                generate_files(__opts__, minion, state, sls_name="pkg", config_system=config_system)
+            )
+        )
     return ret_info(sls_files)
