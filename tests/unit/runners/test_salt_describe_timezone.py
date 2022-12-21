@@ -33,7 +33,7 @@ def test_timezone():
         {"salt.execute": MagicMock(return_value=timezone_list)},
     ):
         with patch.object(salt_describe_timezone_runner, "generate_files") as generate_mock:
-            assert salt_describe_timezone_runner.timezone("minion") is True
+            assert "Generated SLS file locations" in salt_describe_timezone_runner.timezone("minion")
             generate_mock.assert_called_with(
                 {}, "minion", timezone_sls, sls_name="timezone", config_system="salt"
             )

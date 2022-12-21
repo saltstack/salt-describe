@@ -55,7 +55,7 @@ def test_host():
         salt_describe_host_runner.__salt__, {"salt.execute": MagicMock(return_value=host_list)}
     ):
         with patch.object(salt_describe_host_runner, "generate_files") as generate_mock:
-            assert salt_describe_host_runner.host("minion") is True
+            assert "Generated SLS file locations" in salt_describe_host_runner.host("minion")
             generate_mock.assert_called_with(
                 {}, "minion", host_sls, sls_name="host", config_system="salt"
             )

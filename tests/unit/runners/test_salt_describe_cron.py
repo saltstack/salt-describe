@@ -175,7 +175,7 @@ def test_cron(tmp_path):
         salt_describe_cron_runner.__salt__, {"salt.execute": MagicMock(return_value=cron_ret)}
     ):
         with patch.object(salt_describe_cron_runner, "generate_files") as generate_mock:
-            assert salt_describe_cron_runner.cron("minion", user) is True
+            assert "Generated SLS file locations" in salt_describe_cron_runner.cron("minion", user)
             generate_mock.assert_called_with(
                 {}, "minion", cron_sls, sls_name="cron", config_system="salt"
             )

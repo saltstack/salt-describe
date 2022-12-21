@@ -37,7 +37,7 @@ def test_pip():
         salt_describe_pip_runner.__salt__, {"salt.execute": MagicMock(return_value=pip_list)}
     ):
         with patch.object(salt_describe_pip_runner, "generate_files") as generate_mock:
-            assert salt_describe_pip_runner.pip("minion") is True
+            assert "Generated SLS file locations" in salt_describe_pip_runner.pip("minion")
             generate_mock.assert_called_with(
                 {}, "minion", expected_sls_write, sls_name="pip", config_system="salt"
             )
@@ -72,8 +72,8 @@ def test_pip_ansible():
         salt_describe_pip_runner.__salt__, {"salt.execute": MagicMock(return_value=pip_list)}
     ):
         with patch.object(salt_describe_pip_runner, "generate_files") as generate_mock:
-            assert (
-                salt_describe_pip_runner.pip("minion", config_system="ansible", hosts=hosts) is True
+            assert "Generated SLS file locations" in (
+                salt_describe_pip_runner.pip("minion", config_system="ansible", hosts=hosts)
             )
             generate_mock.assert_called_with(
                 {},

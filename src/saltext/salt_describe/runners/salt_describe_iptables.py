@@ -8,6 +8,7 @@ import logging
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import ret_info
 
 __virtualname__ = "describe"
 
@@ -34,6 +35,7 @@ def iptables(tgt, tgt_type="glob", config_system="salt"):
         "iptables.get_rules",
         tgt_type=tgt_type,
     )
+    sls_files = []
     for minion in list(rules.keys()):
         state_contents = {}
         state_func = "iptables.append"
@@ -58,6 +60,8 @@ def iptables(tgt, tgt_type="glob", config_system="salt"):
 
         state = yaml.dump(state_contents)
 
-        generate_files(__opts__, minion, state, sls_name="iptables", config_system=config_system)
+        sls_files.append(str(generate_files(__opts__, minion, state,
+                                            sls_name="iptables",
+                                            config_system=config_system)))
 
-    return True
+    return ret_info(sls_files)

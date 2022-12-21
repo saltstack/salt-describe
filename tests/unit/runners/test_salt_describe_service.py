@@ -53,7 +53,7 @@ def test_service():
         {"salt.execute": MagicMock(side_effect=execute_retvals)},
     ):
         with patch.object(salt_describe_service_runner, "generate_files") as generate_mock:
-            assert salt_describe_service_runner.service("minion") is True
+            assert "Generated SLS file locations" in salt_describe_service_runner.service("minion")
             generate_mock.assert_called_with(
                 {}, "minion", service_sls, sls_name="service", config_system="salt"
             )
@@ -100,9 +100,8 @@ def test_service_ansible():
         {"salt.execute": MagicMock(side_effect=execute_retvals)},
     ):
         with patch.object(salt_describe_service_runner, "generate_files") as generate_mock:
-            assert (
+            assert "Generated SLS file locations" in (
                 salt_describe_service_runner.service("minion", config_system="ansible", hosts=hosts)
-                is True
             )
             generate_mock.assert_called_with(
                 {}, "minion", service_yml, sls_name="service", config_system="ansible"

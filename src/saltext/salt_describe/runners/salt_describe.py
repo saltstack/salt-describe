@@ -9,6 +9,8 @@ import pathlib
 from inspect import Parameter
 from inspect import signature
 
+from saltext.salt_describe.utils.init import ret_info
+
 import salt.daemons.masterapi  # pylint: disable=import-error
 import salt.utils.files  # pylint: disable=import-error
 import yaml
@@ -126,6 +128,7 @@ def all_(tgt, top=True, include=None, exclude=None, config_system="salt", **kwar
     kwargs["tgt"] = tgt
     kwargs["config_system"] = config_system
 
+    sls_files = []
     for name, func in allowed_methods.items():
         sig = signature(func)
         call_args = []
@@ -176,14 +179,19 @@ def all_(tgt, top=True, include=None, exclude=None, config_system="salt", **kwar
 
         try:
             # This follows the unwritten standard that the minion target must be the first argument
-            __salt__[f"describe.{name}"](*bound_sig.args, **bound_sig.kwargs)
+            log.debug(f"Generating SLS for {name} module")
+            ret = __salt__[f"describe.{name}"](*bound_sig.args, **bound_sig.kwargs)
+            if isinstance(ret, dict):
+                sls_files = sls_files + list(ret.values())[0]
+            else:
+                log.error(f"Could not generate the SLS file for {name}")
         except TypeError as err:
             log.error(err.args[0])
 
     # generate the top file
     if top:
         __salt__["describe.top"](tgt)
-    return True
+    return ret_info(sls_files)
 
 
 @_exclude_from_all

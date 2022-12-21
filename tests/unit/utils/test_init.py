@@ -40,3 +40,22 @@ def test_get_minion_state_file_root(tmp_path, config_system):
     assert describe_util.get_minion_state_file_root(
         {"file_roots": {"base": [tmp_path / "file_root"]}}, "minion", config_system=config_system
     )
+
+
+def test_ret_info_sls_files(tmp_path):
+    """
+    Test when ret_info when sls_files exist
+    """
+    sls_files = [tmp_path / "one.sls", tmp_path / "two.sls"]
+    ret = describe_util.ret_info(sls_files)
+    assert ret == {"Generated SLS file locations": sls_files}
+
+
+def test_ret_info_no_sls_files(caplog):
+    """
+    Test when ret_info when sls_files exist
+    """
+    sls_files = []
+    ret = describe_util.ret_info(sls_files)
+    "SLS file not generated" in caplog.text
+    assert ret is False

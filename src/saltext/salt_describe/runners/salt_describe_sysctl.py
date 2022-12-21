@@ -8,6 +8,7 @@ import logging
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import ret_info
 
 __virtualname__ = "describe"
 
@@ -37,6 +38,7 @@ def sysctl(tgt, sysctl_items, tgt_type="glob", config_system="salt"):
     )
 
     state_contents = {}
+    sls_files = []
     for minion in list(sysctls.keys()):
         for current in sysctl_items:
             if current in sysctls[minion].keys():
@@ -46,6 +48,8 @@ def sysctl(tgt, sysctl_items, tgt_type="glob", config_system="salt"):
                 log.error("%s not found in sysctl", current)
 
         state = yaml.dump(state_contents)
-        generate_files(__opts__, minion, state, sls_name="sysctl", config_system=config_system)
+        sls_files.append(str(generate_files(__opts__, minion, state,
+                                            sls_name="sysctl",
+                                            config_system=config_system)))
 
-    return True
+    return ret_info(sls_files)
