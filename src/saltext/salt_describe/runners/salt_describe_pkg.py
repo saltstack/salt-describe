@@ -10,7 +10,9 @@ import sys
 import salt.utils.minions  # pylint: disable=import-error
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import parse_salt_ret
 from saltext.salt_describe.utils.init import ret_info
+
 
 __virtualname__ = "describe"
 
@@ -126,7 +128,8 @@ def pkg(
 
         salt-run describe.pkg minion-tgt config_system=chef
     """
-
+    mod_name = sys._getframe().f_code.co_name
+    log.info("Attempting to generate SLS file for %s", mod_name)
     ret = __salt__["salt.execute"](
         tgt,
         "pkg.list_pkgs",
@@ -134,6 +137,9 @@ def pkg(
     )
 
     sls_files = []
+    if not parse_salt_ret(ret=ret, tgt=tgt):
+        return ret_info(sls_files, mod=mod_name)
+
     for minion in list(ret.keys()):
 
         _, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
@@ -163,4 +169,5 @@ def pkg(
                 generate_files(__opts__, minion, state, sls_name="pkg", config_system=config_system)
             )
         )
-    return ret_info(sls_files)
+
+    return ret_info(sls_files, mod=mod_name)

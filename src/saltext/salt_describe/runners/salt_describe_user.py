@@ -5,9 +5,11 @@ Module for building state file
 
 """
 import logging
+import sys
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import parse_salt_ret
 from saltext.salt_describe.utils.init import ret_info
 from saltext.salt_describe.utils.salt_describe import generate_pillars
 
@@ -32,7 +34,8 @@ def user(tgt, require_groups=False, tgt_type="glob", config_system="salt"):
 
         salt-run describe.user minion-tgt
     """
-
+    mod_name = sys._getframe().f_code.co_name
+    log.info("Attempting to generate SLS file for %s", mod_name)
     state_contents = {}
     if require_groups is True:
         __salt__["describe.group"](tgt=tgt, include_members=False, tgt_type=tgt_type)
@@ -45,6 +48,9 @@ def user(tgt, require_groups=False, tgt_type="glob", config_system="salt"):
 
     pillars = {"users": {}}
     sls_files = []
+    if not parse_salt_ret(ret=users, tgt=tgt):
+        return ret_info(sls_files, mod=mod_name)
+
     for minion in list(users.keys()):
         for user in users[minion]:
             shadow = __salt__["salt.execute"](
@@ -94,11 +100,15 @@ def user(tgt, require_groups=False, tgt_type="glob", config_system="salt"):
 
         state = yaml.dump(state_contents)
         pillars = yaml.dump(pillars)
-        sls_files.append(str(generate_files(__opts__, minion, state,
-                                            sls_name="users",
-                                            config_system=config_system)))
+        sls_files.append(
+            str(
+                generate_files(
+                    __opts__, minion, state, sls_name="users", config_system=config_system
+                )
+            )
+        )
         generate_pillars(__opts__, minion, pillars, sls_name="users")
-    return ret_info(sls_files)
+    return ret_info(sls_files, mod=mod_name)
 
 
 def group(tgt, include_members=False, tgt_type="glob", config_system="salt"):
@@ -112,11 +122,14 @@ def group(tgt, include_members=False, tgt_type="glob", config_system="salt"):
 
         salt-run describe.group minion-tgt
     """
+    mod_name = sys._getframe().f_code.co_name
     groups = __salt__["salt.execute"](
         tgt,
         "group.getent",
         tgt_type=tgt_type,
     )
+    if not parse_salt_ret(ret=groups, tgt=tgt):
+        return ret_info(sls_files, mod=mod_name)
 
     state_contents = {}
     sls_files = []
@@ -130,8 +143,12 @@ def group(tgt, include_members=False, tgt_type="glob", config_system="salt"):
 
         state = yaml.dump(state_contents)
 
-        sls_files.append(str(generate_files(__opts__, minion, state,
-                                            sls_name="groups",
-                                            config_system=config_system)))
+        sls_files.append(
+            str(
+                generate_files(
+                    __opts__, minion, state, sls_name="groups", config_system=config_system
+                )
+            )
+        )
 
-    return ret_info(sls_files)
+    return ret_info(sls_files, mod=mod_name)

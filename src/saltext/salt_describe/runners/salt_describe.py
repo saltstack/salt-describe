@@ -6,14 +6,14 @@ Module for building state file
 """
 import logging
 import pathlib
+from inspect import getargspec
 from inspect import Parameter
 from inspect import signature
-
-from saltext.salt_describe.utils.init import ret_info
 
 import salt.daemons.masterapi  # pylint: disable=import-error
 import salt.utils.files  # pylint: disable=import-error
 import yaml
+from saltext.salt_describe.utils.init import ret_info
 
 
 __virtualname__ = "describe"
@@ -133,22 +133,34 @@ def all_(tgt, top=True, include=None, exclude=None, config_system="salt", **kwar
         sig = signature(func)
         call_args = []
         call_kwargs = {}
+        args, _, _, defaults = getargspec(func)
+        args = args[: -len(defaults)]
+        misg_req_arg = False
         for p_name, p_obj in sig.parameters.items():
             p_value, failed = _get_arg_for_func(p_name, name, kwargs)
 
             # Take care of required args and kwargs
-            if failed and p_obj.kind == Parameter.POSITIONAL_ONLY:
+            if failed and p_obj.kind == Parameter.POSITIONAL_ONLY or p_name in args and not p_value:
                 log.error("Missing positional arg %s for describe.%s", p_name, name)
-                return False
+                misg_req_arg = True
+                # we can still continue trying to generate other SLS files even if a
+                # required arg is not available for a specific module
+                break
             if failed and p_obj.kind == Parameter.KEYWORD_ONLY and p_obj.default == Parameter.empty:
                 log.error("Missing required keyword arg %s for describe.%s", p_name, name)
-                return False
+                misg_req_arg = True
+                # we can still continue trying to generate other SLS files even if a
+                # required arg is not available for a specific module
+                break
 
             # We can fail to find some args
             if failed:
                 continue
 
-            if p_obj.kind in (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD):
+            if (
+                p_obj.kind in (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD)
+                and p_name in args
+            ):
                 call_args.append(p_value)
             elif p_obj.kind == Parameter.VAR_POSITIONAL:
                 if not isinstance(p_value, list):
@@ -162,7 +174,11 @@ def all_(tgt, top=True, include=None, exclude=None, config_system="salt", **kwar
                     log.error(f"{p_name} must be a Python dictionary")
                     return False
                 call_kwargs.update(p_value)
+            elif p_name not in args:
+                call_kwargs[p_name] = p_value
 
+        if misg_req_arg:
+            continue
         try:
             bound_sig = sig.bind(*call_args, **call_kwargs)
         except TypeError:

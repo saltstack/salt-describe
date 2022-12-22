@@ -5,9 +5,11 @@ Module for building state file
 
 """
 import logging
+import sys
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import parse_salt_ret
 from saltext.salt_describe.utils.init import ret_info
 
 __virtualname__ = "describe"
@@ -81,6 +83,8 @@ def cron(tgt, user="root", include_pre=True, tgt_type="glob", config_system="sal
 
         salt-run describe.all minion-tgt user
     """
+    mod_name = sys._getframe().f_code.co_name
+    log.info("Attempting to generate SLS file for %s", mod_name)
     cron_contents = __salt__["salt.execute"](
         tgt,
         "cron.ls",
@@ -88,6 +92,8 @@ def cron(tgt, user="root", include_pre=True, tgt_type="glob", config_system="sal
         tgt_type=tgt_type,
     )
     sls_files = []
+    if not parse_salt_ret(ret=cron_contents, tgt=tgt):
+        return ret_info(sls_files, mod=mod_name)
     for minion in list(cron_contents.keys()):
         minion_crons = cron_contents[minion]
         crons = minion_crons.get("crons", [])
@@ -167,8 +173,12 @@ def cron(tgt, user="root", include_pre=True, tgt_type="glob", config_system="sal
                 final_sls[state_name] = sls_contents[state_name]
 
         sls_yaml = yaml.dump(final_sls)
-        sls_files.append(str(generate_files(__opts__, minion, sls_yaml,
-                                            sls_name="cron",
-                                            config_system=config_system)))
+        sls_files.append(
+            str(
+                generate_files(
+                    __opts__, minion, sls_yaml, sls_name="cron", config_system=config_system
+                )
+            )
+        )
 
-    return ret_info(sls_files)
+    return ret_info(sls_files, mod=mod_name)
