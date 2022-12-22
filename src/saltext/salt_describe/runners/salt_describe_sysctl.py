@@ -5,6 +5,7 @@ Module for building state file
 
 """
 import logging
+import sys
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
