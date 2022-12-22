@@ -9,6 +9,7 @@ import sys
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import parse_salt_ret
 from saltext.salt_describe.utils.init import ret_info
 
 __virtualname__ = "describe"
@@ -70,13 +71,16 @@ def pip(tgt, tgt_type="glob", bin_env=None, config_system="salt", **kwargs):
         salt-run describe.pip minion-tgt
 
     """
-
+    mod_name = sys._getframe().f_code.co_name
+    log.info("Attempting to generate SLS file for %s", mod_name)
     ret = __salt__["salt.execute"](
         tgt,
         "pip.freeze",
         tgt_type=tgt_type,
         bin_env=bin_env,
     )
+    if not parse_salt_ret(ret=ret, tgt=tgt):
+        return ret_info(sls_files, mod=mod_name)
 
     sls_files = []
     for minion in list(ret.keys()):
@@ -86,8 +90,10 @@ def pip(tgt, tgt_type="glob", bin_env=None, config_system="salt", **kwargs):
         )
         state = yaml.dump(state_contents)
 
-        sls_files.append(str(generate_files(__opts__, minion, state,
-                                            sls_name="pip",
-                                            config_system=config_system)))
+        sls_files.append(
+            str(
+                generate_files(__opts__, minion, state, sls_name="pip", config_system=config_system)
+            )
+        )
 
-    return ret_info(sls_files)
+    return ret_info(sls_files, mod=mod_name)

@@ -7,12 +7,14 @@ Module for building state file
 import logging
 import os
 import pathlib
+import sys
 
 import salt.utils.files  # pylint: disable=import-error
 import yaml
 from saltext.salt_describe.utils.init import generate_files
-from saltext.salt_describe.utils.init import ret_info
 from saltext.salt_describe.utils.init import get_minion_state_file_root
+from saltext.salt_describe.utils.init import parse_salt_ret
+from saltext.salt_describe.utils.init import ret_info
 
 __virtualname__ = "describe"
 
@@ -35,12 +37,14 @@ def file(tgt, paths, tgt_type="glob", config_system="salt"):
 
         salt-run describe.file minion-tgt /etc/salt/minion
     """
-
+    mod_name = sys._getframe().f_code.co_name
+    log.info("Attempting to generate SLS file for %s", mod_name)
     if isinstance(paths, str):
         paths = [paths]
 
     state_contents = {}
     file_contents = {}
+    sls_files = []
     for path in paths:
         _file_contents = __salt__["salt.execute"](
             tgt,
@@ -55,6 +59,9 @@ def file(tgt, paths, tgt_type="glob", config_system="salt"):
             tgt_type=tgt_type,
             arg=[path],
         )
+        for _func_ret in _file_contents, _file_stats:
+            if not parse_salt_ret(ret=_func_ret, tgt=tgt):
+                return ret_info(sls_files, mod=mod_name)
 
         for minion in list(_file_contents.keys()):
             if minion not in file_contents:
@@ -78,7 +85,6 @@ def file(tgt, paths, tgt_type="glob", config_system="salt"):
                 ]
             }
 
-    sls_files = []
     for minion in list(state_contents.keys()):
         state = yaml.dump(state_contents[minion])
         minion_state_root = get_minion_state_file_root(__opts__, minion, config_system="salt")
@@ -91,8 +97,12 @@ def file(tgt, paths, tgt_type="glob", config_system="salt"):
             with salt.utils.files.fopen(path_file, "w") as fp_:
                 fp_.write(file_contents[minion][path])
 
-        sls_files.append(str(generate_files(__opts__, minion, state,
-                                        sls_name="files",
-                                        config_system=config_system)))
+        sls_files.append(
+            str(
+                generate_files(
+                    __opts__, minion, state, sls_name="files", config_system=config_system
+                )
+            )
+        )
 
-    return ret_info(sls_files)
+    return ret_info(sls_files, mod=mod_name)

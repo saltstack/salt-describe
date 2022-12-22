@@ -162,7 +162,9 @@ end
         salt_describe_pkg_runner.__salt__, {"salt.execute": MagicMock(return_value=pkg_list)}
     ):
         with patch.object(salt_describe_pkg_runner, "generate_files") as generate_mock:
-            assert salt_describe_pkg_runner.pkg("minion", config_system="chef") is True
+            assert "Generated SLS file locations" in salt_describe_pkg_runner.pkg(
+                "minion", config_system="chef"
+            )
             generate_mock.assert_called_with(
                 {}, "minion", pkg_rb_contents, sls_name="pkg", config_system="chef"
             )

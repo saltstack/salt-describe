@@ -9,7 +9,9 @@ import sys
 
 import yaml
 from saltext.salt_describe.utils.init import generate_files
+from saltext.salt_describe.utils.init import parse_salt_ret
 from saltext.salt_describe.utils.init import ret_info
+
 
 __virtualname__ = "describe"
 
@@ -117,7 +119,8 @@ def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
 
         salt-run describe.service minion-tgt config_system=ansible hosts=hostgroup
     """
-
+    mod_name = sys._getframe().f_code.co_name
+    log.info("Attempting to generate SLS file for %s", mod_name)
     enabled_services = __salt__["salt.execute"](
         tgt,
         "service.get_enabled",
@@ -138,13 +141,21 @@ def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
     )
 
     sls_files = []
+    for _func_ret in [service_status, disabled_services, enabled_services]:
+        if not parse_salt_ret(ret=_func_ret, tgt=tgt):
+            return ret_info(sls_files, mod=mod_name)
+
     for minion in list(service_status.keys()):
         state_contents = getattr(sys.modules[__name__], f"_parse_{config_system}")(
             minion, service_status, enabled_services, disabled_services, **kwargs
         )
         state = yaml.dump(state_contents)
-        sls_files.append(str(generate_files(__opts__, minion, state,
-                                            sls_name="service",
-                                            config_system=config_system)))
+        sls_files.append(
+            str(
+                generate_files(
+                    __opts__, minion, state, sls_name="service", config_system=config_system
+                )
+            )
+        )
 
-    return ret_info(sls_files)
+    return ret_info(sls_files, mod=mod_name)

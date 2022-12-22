@@ -59,3 +59,19 @@ def test_ret_info_no_sls_files(caplog):
     ret = describe_util.ret_info(sls_files)
     "SLS file not generated" in caplog.text
     assert ret is False
+
+
+@pytest.mark.parametrize(
+    "ret,exp_ret",
+    [
+        ("ERROR: firwalld is not running", False),
+        ("Firewalld is not available", False),
+        ("Ran cmd successfully", True),
+    ],
+)
+def test_parse_salt_ret(caplog, ret, exp_ret):
+    tgt = "test_minion"
+    ret = {tgt: ret}
+    assert describe_util.parse_salt_ret(ret=ret, tgt=tgt) is exp_ret
+    if not exp_ret:
+        assert ret[tgt] in caplog.text

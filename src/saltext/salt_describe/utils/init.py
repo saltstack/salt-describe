@@ -26,8 +26,24 @@ def get_minion_state_file_root(opts, minion, env="base", config_system="salt"):
     return config.get_minion_state_file_root(opts, minion, env=env)
 
 
-def ret_info(sls_files):
+def ret_info(sls_files, mod=None):
     if not sls_files:
-        log.error("SLS file not generated")
+        if mod:
+            log.error("Could not generate SLS file for %s", mod)
         return False
     return {"Generated SLS file locations": sls_files}
+
+
+def parse_salt_ret(ret, tgt):
+    """
+    Parse the Salt return to check for Success
+    or Error
+    """
+    ret = ret.get(tgt)
+    if "ERROR:" in ret:
+        log.error(ret)
+        return False
+    elif "is not available" in ret:
+        log.error(ret)
+        return False
+    return True
