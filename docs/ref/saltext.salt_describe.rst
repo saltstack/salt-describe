@@ -13,6 +13,7 @@ Subpackages
    :maxdepth: 4
 
    saltext.salt_describe.runners
+   saltext.salt_describe.utils
 
 Submodules
 ----------
