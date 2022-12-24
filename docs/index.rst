@@ -5,6 +5,7 @@ Welcome to salt-describe Documentation!
   :maxdepth: 2
   :caption: Contents:
 
+  gettingstarted.rst
   all.rst
 
 Indices and tables
