@@ -55,7 +55,7 @@ def iptables(tgt, tgt_type="glob", config_system="salt"):
 
             _rules = rule[table][chain]["rules"]
             if not _rules:
-                break
+                continue
             for _rule in _rules:
                 kwargs = [{"chain": chain}, {"table": table}]
                 state_id = f"add_iptables_rule_{count}"
