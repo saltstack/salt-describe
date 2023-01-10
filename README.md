@@ -1,6 +1,7 @@
-# salt-describe
+# Salt Describe
 
-Salt Describe Runner
+Salt Describe is a Salt Extension used to automate the generation of infrastructure
+as code files using Salt to query target machines.
 
 ## Quickstart
 
