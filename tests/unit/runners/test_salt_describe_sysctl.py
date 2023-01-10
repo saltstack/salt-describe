@@ -38,7 +38,9 @@ def test_sysctl():
         salt_describe_sysctl_runner.__salt__, {"salt.execute": MagicMock(return_value=sysctl_show)}
     ):
         with patch.object(salt_describe_sysctl_runner, "generate_files") as generate_mock:
-            assert "Generated SLS file locations" in salt_describe_sysctl_runner.sysctl("minion", ["vm.swappiness"])
+            assert "Generated SLS file locations" in salt_describe_sysctl_runner.sysctl(
+                "minion", ["vm.swappiness"]
+            )
             generate_mock.assert_called_with(
                 {}, "minion", sysctl_sls, sls_name="sysctl", config_system="salt"
             )

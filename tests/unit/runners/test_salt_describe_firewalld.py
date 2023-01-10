@@ -55,7 +55,9 @@ def test_firewalld():
         {"salt.execute": MagicMock(return_value=firewalld_ret)},
     ):
         with patch.object(salt_describe_firewalld_runner, "generate_files") as generate_mock:
-            assert "Generated SLS file locations" in salt_describe_firewalld_runner.firewalld("minion")
+            assert "Generated SLS file locations" in salt_describe_firewalld_runner.firewalld(
+                "minion"
+            )
             generate_mock.assert_called_with(
                 {}, "minion", firewalld_sls, sls_name="firewalld", config_system="salt"
             )

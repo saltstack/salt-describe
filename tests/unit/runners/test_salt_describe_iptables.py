@@ -88,7 +88,9 @@ def test_iptables(tmp_path):
         {"salt.execute": MagicMock(return_value=iptables_ret)},
     ):
         with patch.object(salt_describe_iptables_runner, "generate_files") as generate_mock:
-            assert "Generated SLS file locations" in salt_describe_iptables_runner.iptables("minion")
+            assert "Generated SLS file locations" in salt_describe_iptables_runner.iptables(
+                "minion"
+            )
             generate_mock.assert_called_with(
                 {}, "minion", iptables_sls, sls_name="iptables", config_system="salt"
             )
