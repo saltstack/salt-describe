@@ -105,6 +105,7 @@ def test_user():
                 {"shell": "/usr/bin/zsh"},
                 {"groups": ["adm"]},
                 {"password": '{{ salt["pillar.get"]("users:testuser","*") }}'},
+                {"enforce_password": True},
                 {"date": 19103},
                 {"mindays": 0},
                 {"maxdays": 99999},

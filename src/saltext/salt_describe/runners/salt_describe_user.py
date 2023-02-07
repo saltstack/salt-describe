@@ -73,6 +73,7 @@ def user(tgt, require_groups=False, tgt_type="glob", config_system="salt"):
                 {"shell": user["shell"]},
                 {"groups": user["groups"]},
                 {"password": f'{{{{ salt["pillar.get"]("users:{username}","*") }}}}'},
+                {"enforce_password": True},
                 {"date": shadow["lstchg"]},
                 {"mindays": shadow["min"]},
                 {"maxdays": shadow["max"]},
