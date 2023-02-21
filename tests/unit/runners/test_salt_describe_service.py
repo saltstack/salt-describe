@@ -109,3 +109,46 @@ def test_service_ansible():
             generate_mock.assert_called_with(
                 {}, "minion", service_yml, sls_name="service", config_system="ansible"
             )
+
+
+def test_service_chef():
+    enabled_retval = {"minion": ["salt-master", "salt-api"]}
+    disabled_retval = {"minion": ["salt-minion"]}
+    status_retval = {
+        "minion": {
+            "salt-master": True,
+            "salt-minion": True,
+            "salt-api": False,
+            "random-service": True,
+        },
+    }
+
+    service_rb_contents = """service 'salt-master' do
+  action [ :enable, :start ]
+end
+
+service 'salt-minion' do
+  action [ :disable, :start ]
+end
+
+service 'salt-api' do
+  action [ :enable, :stop ]
+end
+
+service 'random-service' do
+  action [ :start ]
+end
+"""
+
+    execute_retvals = [enabled_retval, disabled_retval, status_retval]
+    with patch.dict(
+        salt_describe_service_runner.__salt__,
+        {"salt.execute": MagicMock(side_effect=execute_retvals)},
+    ):
+        with patch.object(salt_describe_service_runner, "generate_files") as generate_mock:
+            assert "Generated SLS file locations" in salt_describe_service_runner.service(
+                "minion", config_system="chef"
+            )
+            generate_mock.assert_called_with(
+                {}, "minion", service_rb_contents, sls_name="service", config_system="chef"
+            )

@@ -104,6 +104,38 @@ def _parse_ansible(minion, service_status, enabled_services, disabled_services, 
     return state_contents
 
 
+def _parse_chef(minion, service_status, enabled_services, disabled_services, **kwargs):
+    """
+    Parse the returned service commands and return
+    chef data.
+    """
+
+    _services = service_status[minion]
+    _contents = []
+    for service, status in _services.items():
+        _enabled = service in enabled_services.get(minion)
+        _disabled = service in disabled_services.get(minion)
+
+        actions = []
+        if _enabled:
+            actions.append(":enable")
+        elif _disabled:
+            actions.append(":disable")
+
+        if status:
+            actions.append(":start")
+        else:
+            actions.append(":stop")
+
+        _actions = ", ".join(actions)
+        service_template = f"""service '{service}' do
+  action [ {_actions} ]
+end
+"""
+        _contents.append(service_template)
+    return _contents
+
+
 def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
     """
     Gather enabled and disabled services on minions and build a state file.
@@ -151,7 +183,10 @@ def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
         state_contents = getattr(sys.modules[__name__], f"_parse_{config_system}")(
             minion, service_status, enabled_services, disabled_services, **kwargs
         )
-        state = yaml.dump(state_contents)
+        if config_system in ("ansible", "salt"):
+            state = yaml.dump(state_contents)
+        else:
+            state = "\n".join(state_contents)
         sls_files.append(
             str(
                 generate_files(
