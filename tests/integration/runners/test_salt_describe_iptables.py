@@ -10,6 +10,15 @@ def test_iptables(salt_run_cli, minion):
     """
     Test describe.iptables
     """
+    # Add one rule to ensure something in the state file
+    ret = salt_run_cli.run(
+        "iptables.append",
+        table="filter=",
+        chain="INPUT",
+        rule="-m state --state RELATED,ESTABLISHED -j ACCEPT",
+        tgt=minion.id,
+    )
+
     ret = salt_run_cli.run("describe.iptables", tgt=minion.id)
     gen_sls = ret.data["Generated SLS file locations"][0]
     with open(gen_sls) as fp:
