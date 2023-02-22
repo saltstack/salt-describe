@@ -9,6 +9,7 @@ def test_service(salt_run_cli, minion):
     Test describe.service
     """
     ret = salt_run_cli.run("describe.service", tgt=minion.id)
+    assert ret == ""
     gen_sls = ret.data["Generated SLS file locations"][0]
     with open(gen_sls) as fp:
         data = yaml.safe_load(fp)
