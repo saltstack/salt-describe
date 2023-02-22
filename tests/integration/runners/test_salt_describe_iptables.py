@@ -23,6 +23,7 @@ def test_iptables(salt_run_cli, minion):
     gen_sls = ret.data["Generated SLS file locations"][0]
     with open(gen_sls) as fp:
         data = yaml.safe_load(fp)
-    if data:
-        assert "chain" in data["add_iptables_rule_0"]["iptables.append"][0]
-        assert ret.returncode == 0
+    if not data:
+        pytest.skip("State file contents is empty, no iptables rules available.  Skipping")
+    assert "chain" in data["add_iptables_rule_0"]["iptables.append"][0]
+    assert ret.returncode == 0
