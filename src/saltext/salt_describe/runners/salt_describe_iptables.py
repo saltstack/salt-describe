@@ -50,7 +50,6 @@ def iptables(tgt, tgt_type="glob", config_system="salt"):
         state_func = "iptables.append"
 
         rule = rules[minion]
-        table = list(rule)[0]
         for table in list(rule):
             chains = list(rule[table])
             count = 0
