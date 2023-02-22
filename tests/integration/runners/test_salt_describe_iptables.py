@@ -1,9 +1,11 @@
 # Copyright 2023 VMware, Inc.
 # SPDX-License-Identifier: Apache-2.0
 #
+import pytest
 import yaml
 
 
+@pytest.mark.skip_if_binaries_missing("iptables")
 def test_iptables(salt_run_cli, minion):
     """
     Test describe.iptables
