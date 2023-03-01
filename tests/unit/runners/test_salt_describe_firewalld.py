@@ -64,3 +64,21 @@ def test_firewalld():
             generate_mock.assert_called_with(
                 {}, "minion", firewalld_sls, sls_name="firewalld", config_system="salt"
             )
+
+
+def test_firewalld_unavailable():
+    """
+    test describe.firewalld
+    """
+    firewalld_ret = {
+        "minion": {
+            "'firewalld' __virtual__ returned False: The firewalld execution module cannot be loaded: the firewall-cmd binary is not in the path."
+        }
+    }
+
+    with patch.dict(
+        salt_describe_firewalld_runner.__salt__,
+        {"salt.execute": MagicMock(return_value=firewalld_ret)},
+    ):
+        with patch.object(salt_describe_firewalld_runner, "generate_files") as generate_mock:
+            ret = salt_describe_firewalld_runner.firewalld("minion")
