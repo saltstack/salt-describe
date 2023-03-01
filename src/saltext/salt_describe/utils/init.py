@@ -50,5 +50,8 @@ def parse_salt_ret(ret, tgt):
         elif "is not available" in ret[_tgt]:
             log.error(ret)
             _status.append(False)
+        elif "module cannot be loaded" in ret[_tgt]:
+            log.error(ret)
+            _status.append(False)
         _status.append(True)
     return all(_status)
