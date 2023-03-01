@@ -71,9 +71,7 @@ def test_firewalld_unavailable():
     test describe.firewalld
     """
     firewalld_ret = {
-        "minion": {
-            "'firewalld' __virtual__ returned False: The firewalld execution module cannot be loaded: the firewall-cmd binary is not in the path."
-        }
+        "minion": "'firewalld' __virtual__ returned False: The firewalld execution module cannot be loaded: the firewall-cmd binary is not in the path."
     }
 
     with patch.dict(

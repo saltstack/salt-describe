@@ -42,14 +42,16 @@ def parse_salt_ret(ret, tgt):
     Parse the Salt return to check for Success
     or Error
     """
-    ret = ret.get(tgt)
-    if "ERROR:" in ret:
-        log.error(ret)
-        return False
-    elif "is not available" in ret:
-        log.error(ret)
-        return False
-    elif "module cannot be loaded" in ret:
-        log.error(ret)
-        return False
-    return True
+    _status = []
+    for _tgt in ret:
+        if "ERROR:" in ret[_tgt]:
+            log.error(ret)
+            _status.append(False)
+        elif "is not available" in ret[_tgt]:
+            log.error(ret)
+            _status.append(False)
+        elif "module cannot be loaded" in ret[_tgt]:
+            log.error(ret)
+            _status.append(False)
+        _status.append(True)
+    return all(_status)
