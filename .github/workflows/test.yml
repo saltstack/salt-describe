@@ -198,6 +198,13 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Download libeay32.dll
+      run: |
+        export PY_VER=$(python -c "import sys; print('{}.{}.{}'.format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro))")
+        export PY_LOC="/C/hostedtoolcache/windows/python/${PY_VER}/"
+        curl https://repo.saltproject.io/windows/dependencies/64/libeay32.dll --output ${PY_LOC}/libeay32.dll
+      shell: bash
+
     - name: Install Nox
       run: |
         python -m pip install --upgrade pip
