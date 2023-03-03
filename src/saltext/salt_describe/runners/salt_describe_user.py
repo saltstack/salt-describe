@@ -25,7 +25,14 @@ def __virtual__():
     return __virtualname__
 
 
-def user(tgt, require_groups=False, tgt_type="glob", config_system="salt"):
+def user(
+    tgt,
+    require_groups=False,
+    minimum_uid=None,
+    minimum_gid=None,
+    tgt_type="glob",
+    config_system="salt",
+):
     """
     read users on the minions and build a state file
     to manage the users.
@@ -40,7 +47,9 @@ def user(tgt, require_groups=False, tgt_type="glob", config_system="salt"):
     log.info("Attempting to generate SLS file for %s", mod_name)
     state_contents = {}
     if require_groups is True:
-        __salt__["describe.group"](tgt=tgt, include_members=False, tgt_type=tgt_type)
+        __salt__["describe.group"](
+            tgt=tgt, include_members=False, minimum_gid=minimum_gid, tgt_type=tgt_type
+        )
 
     users = __salt__["salt.execute"](
         tgt,
@@ -55,6 +64,8 @@ def user(tgt, require_groups=False, tgt_type="glob", config_system="salt"):
 
     for minion in list(users.keys()):
         for user in users[minion]:
+            if minimum_uid and int(user["uid"]) <= minimum_uid:
+                continue
             shadow = __salt__["salt.execute"](
                 minion, "shadow.info", arg=[user["name"]], tgt_type="glob"
             )[minion]
@@ -114,7 +125,7 @@ def user(tgt, require_groups=False, tgt_type="glob", config_system="salt"):
     return ret_info(sls_files, mod=mod_name)
 
 
-def group(tgt, include_members=False, tgt_type="glob", config_system="salt"):
+def group(tgt, include_members=False, minimum_gid=None, tgt_type="glob", config_system="salt"):
     """
     read groups on the minions and build a state file
     to managed th groups.
@@ -138,6 +149,8 @@ def group(tgt, include_members=False, tgt_type="glob", config_system="salt"):
     sls_files = []
     for minion in list(groups.keys()):
         for group in groups[minion]:
+            if minimum_gid and int(group["gid"]) <= minimum_gid:
+                continue
             groupname = group["name"]
             payload = [{"name": groupname}, {"gid": group["gid"]}]
             if include_members is True:
