@@ -200,9 +200,12 @@ jobs:
 
     - name: Download libeay32.dll
       run: |
-        export PY_VER=$(python -c "import sys; print('{}.{}.{}'.format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro))")
-        export PY_LOC="/C/hostedtoolcache/windows/python/${PY_VER}/"
-        curl https://repo.saltproject.io/windows/dependencies/64/libeay32.dll --output ${PY_LOC}/libeay32.dll
+        export PY_LOC=$(which python.exe)
+        echo ${PY_LOC}
+        export PY_DIR=$(dirname ${PY_LOC})
+        echo ${PY_DIR}
+        curl https://repo.saltproject.io/windows/dependencies/64/libeay32.dll --output ${PY_DIR}/libeay32.dll
+        ls -l ${PY_DIR}
       shell: bash
 
     - name: Install Nox
