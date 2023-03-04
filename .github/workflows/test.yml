@@ -70,7 +70,7 @@ jobs:
           - 3004.2
           - 3005.1
         include:
-          - python-version: 3.10
+          - python-version: 3.10.10
             salt-version: 3006.0rc1
 
     steps:
@@ -192,6 +192,9 @@ jobs:
         salt-version:
           - 3004.2
           - 3005.1
+        include:
+          - python-version: 3.10.10
+            salt-version: 3006.0rc1
 
     steps:
     - uses: actions/checkout@v2
@@ -322,12 +325,11 @@ jobs:
       max-parallel: 3
       matrix:
         include:
-          - python-version: 3.7
-            salt-version: 3004.2
-          - python-version: 3.7
-            salt-version: 3005.1
           - python-version: 3.9
             salt-version: 3005.1
+        include:
+          - python-version: 3.10.10
+            salt-version: 3006.0rc1
 
     steps:
     - uses: actions/checkout@v2
