@@ -135,15 +135,34 @@ def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
         tgt_type=tgt_type,
     )
 
-    service_status = __salt__["salt.execute"](
-        tgt,
-        "service.status",
-        "*",
-        tgt_type=tgt_type,
-    )
+    if sys.platform.startswith("darwin"):
+        all_services = __salt__["salt.execute"](
+            tgt,
+            "service.get_all",
+            tgt_type=tgt_type,
+        )
+
+        service_status = {}
+        for _service in all_services:
+            _status = __salt__["salt.execute"](
+                tgt,
+                "service.status",
+                _service,
+                tgt_type=tgt_type,
+            )
+            service_status[_service] = _status
+        func_ret = [service_status, enabled_services]
+    else:
+        service_status = __salt__["salt.execute"](
+            tgt,
+            "service.status",
+            "*",
+            tgt_type=tgt_type,
+        )
+        func_ret = [service_status, disabled_services, enabled_services]
 
     sls_files = []
-    for _func_ret in [service_status, disabled_services, enabled_services]:
+    for _func_ret in func_ret:
         if not parse_salt_ret(ret=_func_ret, tgt=tgt):
             return ret_info(sls_files, mod=mod_name)
 
