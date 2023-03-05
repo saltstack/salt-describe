@@ -128,15 +128,21 @@ def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
         "service.get_enabled",
         tgt_type=tgt_type,
     )
+    disabled_services = __salt__["salt.execute"](
+        tgt,
+        "service.get_disabled",
+        tgt_type=tgt_type,
+    )
 
     if sys.platform.startswith("darwin"):
+
         all_services = __salt__["salt.execute"](
             tgt,
             "service.get_all",
             tgt_type=tgt_type,
         )
 
-        service_status = {}
+        service_status = {tgt: {}}
         for _service in all_services:
             _status = __salt__["salt.execute"](
                 tgt,
@@ -144,14 +150,9 @@ def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
                 _service,
                 tgt_type=tgt_type,
             )
-            service_status[_service] = _status
+            service_status[tgt][_service] = _status
         func_ret = [service_status, enabled_services]
     else:
-        disabled_services = __salt__["salt.execute"](
-            tgt,
-            "service.get_disabled",
-            tgt_type=tgt_type,
-        )
 
         service_status = __salt__["salt.execute"](
             tgt,

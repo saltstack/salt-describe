@@ -34,15 +34,26 @@ def test_service():
                 "service.running": [{"enable": True}],
             },
             "salt-minion": {
-                "service.running": [{"enable": False}],
+                "service.running": [],
             },
             "salt-api": {
                 "service.dead": [{"enable": True}],
             },
         }
 
-        status_retval = True
-        execute_retvals = [enabled_retval, get_all, status_retval]
+        status_retval_true = True
+        status_retval_false = False
+
+        disabled_retval = {"minion": "'service.get_disabled' is not available."}
+
+        execute_retvals = [
+            enabled_retval,
+            disabled_retval,
+            get_all,
+            status_retval_true,
+            status_retval_true,
+            status_retval_false,
+        ]
     else:
         service_sls_contents = {
             "salt-master": {
