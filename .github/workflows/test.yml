@@ -345,6 +345,13 @@ jobs:
       run: |
         nox --force-color -e tests-3 --install-only
 
+    - name: Override FQDNS Grains
+      run: |
+        mkdir -p /etc/salt/minion.d
+        echo "enable_fqdns_grain: False" >> /etc/salt/minion.d/fqdns_grains.conf
+        mkdir -p /etc/salt/master.d
+        echo "enable_fqdns_grain: False" >> /etc/salt/master.d/fqdns_grains.conf
+
     - name: Test
       env:
         SALT_REQUIREMENT: salt==${{ matrix.salt-version }}

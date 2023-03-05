@@ -20,7 +20,7 @@ def test_service(salt_run_cli, minion):
 
     if sys.platform.startswith("win"):
         _service = "Schedule"
-    elif sys.platform.startswith("darwinn"):
+    elif sys.platform.startswith("darwin"):
         _service = "com.openssh.sshd"
     else:
         _service = "sshd"

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
+import sys
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -24,33 +25,54 @@ def configure_loader_modules():
 
 def test_service():
     enabled_retval = {"minion": ["salt-master", "salt-api"]}
-    disabled_retval = {"minion": ["salt-minion"]}
-    status_retval = {
-        "minion": {
-            "salt-master": True,
-            "salt-minion": True,
-            "salt-api": False,
-            "random-service": True,
-        },
-    }
 
-    service_sls_contents = {
-        "salt-master": {
-            "service.running": [{"enable": True}],
-        },
-        "salt-minion": {
-            "service.running": [{"enable": False}],
-        },
-        "salt-api": {
-            "service.dead": [{"enable": True}],
-        },
-        "random-service": {
-            "service.running": [],
-        },
-    }
+    if sys.platform.startswith("darwin"):
+        get_all = ["salt-master", "salt-minion", "salt-api"]
+
+        service_sls_contents = {
+            "salt-master": {
+                "service.running": [{"enable": True}],
+            },
+            "salt-minion": {
+                "service.running": [{"enable": False}],
+            },
+            "salt-api": {
+                "service.dead": [{"enable": True}],
+            },
+        }
+
+        status_retval = True
+        execute_retvals = [enabled_retval, get_all, status_retval]
+    else:
+        service_sls_contents = {
+            "salt-master": {
+                "service.running": [{"enable": True}],
+            },
+            "salt-minion": {
+                "service.running": [{"enable": False}],
+            },
+            "salt-api": {
+                "service.dead": [{"enable": True}],
+            },
+            "random-service": {
+                "service.running": [],
+            },
+        }
+
+        status_retval = {
+            "minion": {
+                "salt-master": True,
+                "salt-minion": True,
+                "salt-api": False,
+                "random-service": True,
+            },
+        }
+        disabled_retval = {"minion": ["salt-minion"]}
+
+        execute_retvals = [enabled_retval, disabled_retval, status_retval]
+
     service_sls = yaml.dump(service_sls_contents)
 
-    execute_retvals = [enabled_retval, disabled_retval, status_retval]
     with patch.dict(
         salt_describe_service_runner.__salt__,
         {"salt.execute": MagicMock(side_effect=execute_retvals)},
@@ -63,8 +85,55 @@ def test_service():
 
 
 def test_service_ansible():
+
     enabled_retval = {"minion": ["salt-master", "salt-api"]}
-    disabled_retval = {"minion": ["salt-minion"]}
+    if sys.platform.startswith("darwin"):
+        get_all = ["salt-master", "salt-minion", "salt-api"]
+
+        service_sls_contents = {
+            "salt-master": {
+                "service.running": [{"enable": True}],
+            },
+            "salt-minion": {
+                "service.running": [{"enable": False}],
+            },
+            "salt-api": {
+                "service.dead": [{"enable": True}],
+            },
+        }
+
+        status_retval = True
+        execute_retvals = [enabled_retval, get_all, status_retval]
+    else:
+        service_sls_contents = {
+            "salt-master": {
+                "service.running": [{"enable": True}],
+            },
+            "salt-minion": {
+                "service.running": [{"enable": False}],
+            },
+            "salt-api": {
+                "service.dead": [{"enable": True}],
+            },
+            "random-service": {
+                "service.running": [],
+            },
+        }
+
+        status_retval = {
+            "minion": {
+                "salt-master": True,
+                "salt-minion": True,
+                "salt-api": False,
+                "random-service": True,
+            },
+        }
+        disabled_retval = {"minion": ["salt-minion"]}
+
+        execute_retvals = [enabled_retval, disabled_retval, status_retval]
+
+    service_sls = yaml.dump(service_sls_contents)
+
     hosts = "testgroup"
     status_retval = {
         "minion": {
