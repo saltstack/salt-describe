@@ -345,12 +345,6 @@ jobs:
       run: |
         nox --force-color -e tests-3 --install-only
 
-    - name: Setup upterm session
-      uses: lhotari/action-upterm@v1
-      with:
-        ## limits ssh access and adds the ssh public key for the user which triggered the workflow
-        limit-access-to-actor: true
-
     - name: Test
       env:
         SALT_REQUIREMENT: salt==${{ matrix.salt-version }}

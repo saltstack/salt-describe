@@ -5,7 +5,6 @@ import pytest
 import yaml
 
 
-@pytest.mark.skip_if_binaries_missing("brew")
 def test_pkg(salt_run_cli, minion):
     """
     Test describe.pkg

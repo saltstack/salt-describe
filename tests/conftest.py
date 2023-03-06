@@ -21,11 +21,11 @@ def salt_factories_config():
 
 @pytest.fixture(scope="package")
 def master(salt_factories):
-    config_defaults = {"enable_fqdns_grains": False, "timeout": 30}
+    config_defaults = {"enable_fqdns_grains": False, "timeout": 120}
     return salt_factories.salt_master_daemon(random_string("master-"), defaults=config_defaults)
 
 
 @pytest.fixture(scope="package")
 def minion(master):
-    config_defaults = {"enable_fqdns_grains": False, "timeout": 30}
+    config_defaults = {"enable_fqdns_grains": False, "timeout": 120}
     return master.salt_minion_daemon(random_string("minion-"), defaults=config_defaults)
