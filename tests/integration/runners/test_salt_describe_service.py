@@ -21,7 +21,7 @@ def test_service(salt_run_cli, minion):
     if sys.platform.startswith("win"):
         _service = "Schedule"
     elif sys.platform.startswith("darwin"):
-        _service = "com.openssh.homed"
+        _service = "com.apple.homed"
     else:
         _service = "sshd"
     assert _service in data
