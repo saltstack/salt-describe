@@ -6,6 +6,7 @@ Module for building state file
 .. versionadded:: 3006
 
 """
+import io
 import logging
 import sys
 
@@ -138,22 +139,23 @@ def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
 
         all_services = __salt__["salt.execute"](
             tgt,
-            "service.get_all",
+            "service.list",
             tgt_type=tgt_type,
         )
+        buf = io.StringIO(all_services[tgt])
+        contents = buf.readlines()
 
         service_status = {tgt: {}}
-        for _service in all_services:
-            _status = __salt__["salt.execute"](
-                tgt,
-                "service.status",
-                _service,
-                tgt_type=tgt_type,
-            )
-            service_status[tgt][_service] = _status
+        for _line in contents:
+            if "PID" in _line:
+                continue
+            pid, status, service = _line.split()
+            if pid == "-":
+                service_status[tgt][service] = False
+            else:
+                service_status[tgt][service] = True
         func_ret = [service_status, enabled_services]
     else:
-
         service_status = __salt__["salt.execute"](
             tgt,
             "service.status",
