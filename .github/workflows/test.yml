@@ -340,10 +340,10 @@ jobs:
         pip install nox
 
     - name: Install Test Requirements
-       env:
-         SALT_REQUIREMENT: salt==${{ matrix.salt-version }}
-       run: |
-         nox --force-color -e tests-3 --install-only
+      env:
+        SALT_REQUIREMENT: salt==${{ matrix.salt-version }}
+      run: |
+        nox --force-color -e tests-3 --install-only
 
     - name: Setup upterm session
       uses: lhotari/action-upterm@v1
