@@ -193,7 +193,6 @@ end
 service 'com.saltstack.salt.master' do
   action [ :enable, :start ]
 end
-
 """
 
         disabled_retval = {"minion": "'service.get_disabled' is not available."}
