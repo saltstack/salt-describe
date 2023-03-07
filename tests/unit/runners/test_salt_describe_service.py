@@ -186,11 +186,11 @@ def test_service_chef():
             "minion": "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
         }
 
-        service_rb_contents = """service 'salt-master' do
+        service_rb_contents = """service 'com.saltstack.salt.minion.' do
   action [ :enable, :start ]
 end
 
-service 'salt-minion' do
+service 'com.saltstack.salt.master' do
   action [ :enable, :start ]
 end
 
