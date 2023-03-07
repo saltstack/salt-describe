@@ -229,7 +229,7 @@ service 'random-service' do
 end
 """
 
-    execute_retvals = [enabled_retval, disabled_retval, status_retval]
+        execute_retvals = [enabled_retval, disabled_retval, status_retval]
     with patch.dict(
         salt_describe_service_runner.__salt__,
         {"salt.execute": MagicMock(side_effect=execute_retvals)},
