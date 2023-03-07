@@ -178,18 +178,41 @@ def test_service_ansible():
 
 
 def test_service_chef():
-    enabled_retval = {"minion": ["salt-master", "salt-api"]}
-    disabled_retval = {"minion": ["salt-minion"]}
-    status_retval = {
-        "minion": {
-            "salt-master": True,
-            "salt-minion": True,
-            "salt-api": False,
-            "random-service": True,
-        },
-    }
 
-    service_rb_contents = """service 'salt-master' do
+    if sys.platform.startswith("darwin"):
+        enabled_retval = {"minion": ["com.saltstack.salt.master", "com.saltstack.salt.minion"]}
+
+        list_retval = {
+            "minion": "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
+        }
+
+        service_rb_contents = """service 'salt-master' do
+  action [ :enable, :start ]
+end
+
+service 'salt-minion' do
+  action [ :enable, :start ]
+end
+
+"""
+
+        disabled_retval = {"minion": "'service.get_disabled' is not available."}
+
+        execute_retvals = [enabled_retval, disabled_retval, list_retval]
+    else:
+
+        enabled_retval = {"minion": ["salt-master", "salt-api"]}
+        disabled_retval = {"minion": ["salt-minion"]}
+        status_retval = {
+            "minion": {
+                "salt-master": True,
+                "salt-minion": True,
+                "salt-api": False,
+                "random-service": True,
+            },
+        }
+
+        service_rb_contents = """service 'salt-master' do
   action [ :enable, :start ]
 end
 
