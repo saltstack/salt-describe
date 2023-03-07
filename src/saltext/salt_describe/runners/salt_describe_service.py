@@ -6,6 +6,7 @@ Module for building state file
 .. versionadded:: 3006
 
 """
+import io
 import logging
 import sys
 
@@ -128,22 +129,43 @@ def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
         "service.get_enabled",
         tgt_type=tgt_type,
     )
-
     disabled_services = __salt__["salt.execute"](
         tgt,
         "service.get_disabled",
         tgt_type=tgt_type,
     )
 
-    service_status = __salt__["salt.execute"](
-        tgt,
-        "service.status",
-        "*",
-        tgt_type=tgt_type,
-    )
+    if sys.platform.startswith("darwin"):
+
+        all_services = __salt__["salt.execute"](
+            tgt,
+            "service.list",
+            tgt_type=tgt_type,
+        )
+        buf = io.StringIO(all_services[tgt])
+        contents = buf.readlines()
+
+        service_status = {tgt: {}}
+        for _line in contents:
+            if "PID" in _line:
+                continue
+            pid, status, service = _line.split()
+            if pid == "-":
+                service_status[tgt][service] = False
+            else:
+                service_status[tgt][service] = True
+        func_ret = [service_status, enabled_services]
+    else:
+        service_status = __salt__["salt.execute"](
+            tgt,
+            "service.status",
+            "*",
+            tgt_type=tgt_type,
+        )
+        func_ret = [service_status, disabled_services, enabled_services]
 
     sls_files = []
-    for _func_ret in [service_status, disabled_services, enabled_services]:
+    for _func_ret in func_ret:
         if not parse_salt_ret(ret=_func_ret, tgt=tgt):
             return ret_info(sls_files, mod=mod_name)
 

@@ -64,11 +64,14 @@ jobs:
       max-parallel: 4
       matrix:
         python-version:
-          - 3.6
-          - 3.7
           - 3.8
+          - 3.9
         salt-version:
           - 3004.2
+          - 3005.1
+        include:
+          - python-version: 3.10.10
+            salt-version: 3006.0rc1
 
     steps:
     - uses: actions/checkout@v2
@@ -183,11 +186,11 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        python-version:
-          # - 3.6
-          - 3.7
-        salt-version:
-          - 3004.2
+        include:
+          - python-version: 3.8
+            salt-version: 3004.2
+          - python-version: 3.8
+            salt-version: 3005.1
 
     steps:
     - uses: actions/checkout@v2
@@ -196,6 +199,16 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Download libeay32.dll
+      run: |
+        export PY_LOC=$(which python.exe)
+        echo ${PY_LOC}
+        export PY_DIR=$(dirname ${PY_LOC})
+        echo ${PY_DIR}
+        curl https://repo.saltproject.io/windows/dependencies/64/libeay32.dll --output ${PY_DIR}/libeay32.dll
+        ls -l ${PY_DIR}
+      shell: bash
 
     - name: Install Nox
       run: |
@@ -307,11 +320,11 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        python-version:
-          # - 3.6
-          - 3.7
-        salt-version:
-          - 3004.2
+        include:
+          - python-version: 3.9
+            salt-version: 3005.1
+          - python-version: 3.10.10
+            salt-version: 3006.0rc1
 
     steps:
     - uses: actions/checkout@v2
