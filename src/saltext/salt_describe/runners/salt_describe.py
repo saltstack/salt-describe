@@ -236,27 +236,42 @@ def top_(tgt, tgt_type="glob", env="base"):
     top_file_dict = {}
 
     with salt.utils.files.fopen(top_file, "r") as fp_:
-        top_file_dict = yaml.safe_load(fp_.read())
+        top_data = yaml.safe_load(fp_.read())
+        if top_data:
+            top_file_dict = top_data
 
     if env not in top_file_dict:
         top_file_dict[env] = {}
 
     for minion in minions:
+        sls_files = []
         add_top = []
         minion_file_root = state_file_root / minion
+        if not minion_file_root.exists():
+            log.error(f"The file root path {minion_file_root} does not exist")
+            return False
         for file in minion_file_root.iterdir():
             if file.suffix == ".sls" and file.stem != "init":
-                add_top.append(minion + "." + file.stem)
+                sls_files.append(minion + "." + file.stem)
+
+        # Check to see if the SLS file already exists in top file
+        for sls in sls_files:
+            if sls not in top_file_dict[env].get(minion, []):
+                add_top.append(sls)
 
         if minion not in top_file_dict[env]:
             top_file_dict[env][minion] = add_top
         else:
-            top_file_dict[env][minion].append(add_top)
+            for _top_file in add_top:
+                top_file_dict[env][minion].append(_top_file)
 
-    with salt.utils.files.fopen(top_file, "w") as fp_:
-        fp_.write(yaml.dump(top_file_dict))
+    if add_top:
+        with salt.utils.files.fopen(top_file, "w") as fp_:
+            fp_.write(yaml.dump(top_file_dict))
+    else:
+        return {"Top file was not changed, alread contains correct SLS files": str(top_file)}
 
-    return True
+    return ret_info(str(top_file), mod="top file")
 
 
 @_exclude_from_all

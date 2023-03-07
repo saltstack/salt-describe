@@ -78,3 +78,48 @@ def test_parse_salt_ret(caplog, ret, exp_ret):
     assert describe_util.parse_salt_ret(ret=ret, tgt=tgt) is exp_ret
     if not exp_ret:
         assert ret[tgt] in caplog.text
+
+
+@pytest.mark.parametrize(
+    "ret,exp_ret",
+    [
+        ("ERROR: firwalld is not running", False),
+        ("Firewalld is not available", False),
+        ("Ran cmd successfully", True),
+    ],
+)
+def test_parse_salt_multiple_ret(caplog, ret, exp_ret):
+    tgt = "*"
+    _ret = {
+        "test_minion1": ("Ran cmd successfully", True),
+        "test_minion2": ("Ran cmd successfully", True),
+        "test_minion3": ret,
+    }
+    tgts = ["test_minion1", "test_minion2", "test_minion3"]
+    assert describe_util.parse_salt_ret(ret=_ret, tgt=tgt) is exp_ret
+    if not exp_ret:
+        for _tgt in tgts:
+            if _ret[_tgt] == ret:
+                assert _ret[_tgt] in caplog.text
+
+    tgt = "*"
+    _ret = {
+        "test_minion1": ("Ran cmd successfully", True),
+        "test_minion2": ret,
+        "test_minion3": ret,
+    }
+    tgts = ["test_minion1", "test_minion2", "test_minion3"]
+    assert describe_util.parse_salt_ret(ret=_ret, tgt=tgt) is exp_ret
+    if not exp_ret:
+        for _tgt in tgts:
+            if _ret[_tgt] == ret:
+                assert _ret[_tgt] in caplog.text
+
+    tgt = "*"
+    _ret = {"test_minion1": ret, "test_minion2": ret, "test_minion3": ret}
+    tgts = ["test_minion1", "test_minion2", "test_minion3"]
+    assert describe_util.parse_salt_ret(ret=_ret, tgt=tgt) is exp_ret
+    if not exp_ret:
+        for _tgt in tgts:
+            if _ret[_tgt] == ret:
+                assert _ret[_tgt] in caplog.text

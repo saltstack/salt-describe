@@ -1,9 +1,11 @@
 # Copyright 2023 VMware, Inc.
 # SPDX-License-Identifier: Apache-2.0
 #
+import pytest
 import yaml
 
 
+@pytest.mark.skip_if_binaries_missing("firewall-cmd")
 def test_firewalld(salt_run_cli, minion):
     """
     Test describe.firewalld

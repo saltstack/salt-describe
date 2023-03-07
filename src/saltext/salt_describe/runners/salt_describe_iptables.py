@@ -50,22 +50,22 @@ def iptables(tgt, tgt_type="glob", config_system="salt"):
         state_func = "iptables.append"
 
         rule = rules[minion]
-        table = list(rule)[0]
-        chains = list(rule[table])
-        count = 0
-        for chain in chains:
+        for table in list(rule):
+            chains = list(rule[table])
+            count = 0
+            for chain in chains:
 
-            _rules = rule[table][chain]["rules"]
-            if not _rules:
-                continue
-            for _rule in _rules:
-                kwargs = [{"chain": chain}, {"table": table}]
-                state_id = f"add_iptables_rule_{count}"
-                state_contents[state_id] = {state_func: []}
-                for kwarg in list(_rule.keys()):
-                    kwargs.append({kwarg.replace("_", "-"): " ".join(_rule[kwarg])})
-                state_contents[state_id][state_func] = kwargs
-                count += 1
+                _rules = rule[table][chain]["rules"]
+                if not _rules:
+                    continue
+                for _rule in _rules:
+                    kwargs = [{"chain": chain}, {"table": table}]
+                    state_id = f"add_iptables_rule_{count}"
+                    state_contents[state_id] = {state_func: []}
+                    for kwarg in list(_rule.keys()):
+                        kwargs.append({kwarg.replace("_", "-"): " ".join(_rule[kwarg])})
+                    state_contents[state_id][state_func] = kwargs
+                    count += 1
 
         state = yaml.dump(state_contents)
 
