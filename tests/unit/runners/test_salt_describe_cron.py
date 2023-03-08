@@ -184,4 +184,17 @@ def test_cron(tmp_path):
             )
 
 
+def test_cron_crontab_unavailable(tmp_path):
+    cron_ret = {
+        "minion": "'cron' __virtual__ returned False: Cannot load cron module: crontab command not found"
+    }
+
+    user = "fake_user"
+    with patch.dict(
+        salt_describe_cron_runner.__salt__, {"salt.execute": MagicMock(return_value=cron_ret)}
+    ):
+        with patch.object(salt_describe_cron_runner, "generate_files") as generate_mock:
+            assert not salt_describe_cron_runner.cron("minion", user)
+
+
 # pylint: enable=line-too-long

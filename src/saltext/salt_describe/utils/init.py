@@ -43,15 +43,16 @@ def parse_salt_ret(ret, tgt):
     or Error
     """
     _status = []
+    _errorrs = [
+        "ERROR:",
+        "is not available",
+        "module cannot be loaded",
+        "__virtual__ returned False",
+    ]
     for _tgt in ret:
-        if "ERROR:" in ret[_tgt]:
-            log.error(ret)
-            _status.append(False)
-        elif "is not available" in ret[_tgt]:
-            log.error(ret)
-            _status.append(False)
-        elif "module cannot be loaded" in ret[_tgt]:
-            log.error(ret)
-            _status.append(False)
+        for _error in _errorrs:
+            if _error in ret[_tgt]:
+                log.error(ret)
+                _status.append(False)
         _status.append(True)
     return all(_status)
