@@ -29,7 +29,9 @@ def user(
     tgt,
     require_groups=False,
     minimum_uid=None,
+    maximum_uid=None,
     minimum_gid=None,
+    maximum_gid=None,
     tgt_type="glob",
     config_system="salt",
 ):
@@ -48,7 +50,11 @@ def user(
     state_contents = {}
     if require_groups is True:
         __salt__["describe.group"](
-            tgt=tgt, include_members=False, minimum_gid=minimum_gid, tgt_type=tgt_type
+            tgt=tgt,
+            include_members=False,
+            minimum_gid=minimum_gid,
+            maximum_gid=maximum_gid,
+            tgt_type=tgt_type,
         )
 
     users = __salt__["salt.execute"](
@@ -65,6 +71,8 @@ def user(
     for minion in list(users.keys()):
         for user in users[minion]:
             if minimum_uid and int(user["uid"]) <= minimum_uid:
+                continue
+            if maximum_uid and int(user["uid"]) >= maximum_uid:
                 continue
             shadow = __salt__["salt.execute"](
                 minion, "shadow.info", arg=[user["name"]], tgt_type="glob"
@@ -125,7 +133,14 @@ def user(
     return ret_info(sls_files, mod=mod_name)
 
 
-def group(tgt, include_members=False, minimum_gid=None, tgt_type="glob", config_system="salt"):
+def group(
+    tgt,
+    include_members=False,
+    minimum_gid=None,
+    maximum_gid=None,
+    tgt_type="glob",
+    config_system="salt",
+):
     """
     read groups on the minions and build a state file
     to managed th groups.
