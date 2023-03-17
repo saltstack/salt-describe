@@ -6,6 +6,7 @@ Module for building state file
 .. versionadded:: 3006
 
 """
+import io
 import logging
 import sys
 
@@ -104,6 +105,38 @@ def _parse_ansible(minion, service_status, enabled_services, disabled_services, 
     return state_contents
 
 
+def _parse_chef(minion, service_status, enabled_services, disabled_services, **kwargs):
+    """
+    Parse the returned service commands and return
+    chef data.
+    """
+
+    _services = service_status[minion]
+    _contents = []
+    for service, status in _services.items():
+        _enabled = service in enabled_services.get(minion)
+        _disabled = service in disabled_services.get(minion)
+
+        actions = []
+        if _enabled:
+            actions.append(":enable")
+        elif _disabled:
+            actions.append(":disable")
+
+        if status:
+            actions.append(":start")
+        else:
+            actions.append(":stop")
+
+        _actions = ", ".join(actions)
+        service_template = f"""service '{service}' do
+  action [ {_actions} ]
+end
+"""
+        _contents.append(service_template)
+    return _contents
+
+
 def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
     """
     Gather enabled and disabled services on minions and build a state file.
@@ -128,22 +161,43 @@ def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
         "service.get_enabled",
         tgt_type=tgt_type,
     )
-
     disabled_services = __salt__["salt.execute"](
         tgt,
         "service.get_disabled",
         tgt_type=tgt_type,
     )
 
-    service_status = __salt__["salt.execute"](
-        tgt,
-        "service.status",
-        "*",
-        tgt_type=tgt_type,
-    )
+    if sys.platform.startswith("darwin"):
+
+        all_services = __salt__["salt.execute"](
+            tgt,
+            "service.list",
+            tgt_type=tgt_type,
+        )
+        buf = io.StringIO(all_services[tgt])
+        contents = buf.readlines()
+
+        service_status = {tgt: {}}
+        for _line in contents:
+            if "PID" in _line:
+                continue
+            pid, status, service = _line.split()
+            if pid == "-":
+                service_status[tgt][service] = False
+            else:
+                service_status[tgt][service] = True
+        func_ret = [service_status, enabled_services]
+    else:
+        service_status = __salt__["salt.execute"](
+            tgt,
+            "service.status",
+            "*",
+            tgt_type=tgt_type,
+        )
+        func_ret = [service_status, disabled_services, enabled_services]
 
     sls_files = []
-    for _func_ret in [service_status, disabled_services, enabled_services]:
+    for _func_ret in func_ret:
         if not parse_salt_ret(ret=_func_ret, tgt=tgt):
             return ret_info(sls_files, mod=mod_name)
 
@@ -151,7 +205,10 @@ def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
         state_contents = getattr(sys.modules[__name__], f"_parse_{config_system}")(
             minion, service_status, enabled_services, disabled_services, **kwargs
         )
-        state = yaml.dump(state_contents)
+        if config_system in ("ansible", "salt"):
+            state = yaml.dump(state_contents)
+        else:
+            state = "\n".join(state_contents)
         sls_files.append(
             str(
                 generate_files(
