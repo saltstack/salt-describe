@@ -139,3 +139,152 @@ def test_user():
                 generate_pillars_mock.assert_called_with(
                     {}, "minion", user_pillar, sls_name="users"
                 )
+
+
+def test_user_minimum_maximum_uid():
+    user_getent = {
+        "minion": [
+            {
+                "name": "testuser",
+                "uid": 1000,
+                "gid": 1000,
+                "groups": ["adm"],
+                "home": "/home/testuser",
+                "passwd": "x",
+                "shell": "/usr/bin/zsh",
+                "fullname": "",
+                "homephone": "",
+                "other": "",
+                "roomnumber": "",
+                "workphone": "",
+            },
+            {
+                "name": "testuser2",
+                "uid": 1001,
+                "gid": 1001,
+                "groups": ["adm"],
+                "home": "/home/testuser2",
+                "passwd": "x",
+                "shell": "/usr/bin/zsh",
+                "fullname": "",
+                "homephone": "",
+                "other": "",
+                "roomnumber": "",
+                "workphone": "",
+            },
+            {
+                "name": "testuser3",
+                "uid": 1002,
+                "gid": 1002,
+                "groups": ["adm"],
+                "home": "/home/testuser3",
+                "passwd": "x",
+                "shell": "/usr/bin/zsh",
+                "fullname": "",
+                "homephone": "",
+                "other": "",
+                "roomnumber": "",
+                "workphone": "",
+            },
+        ]
+    }
+
+    user_shadow = {
+        "minion": {
+            "expire": -1,
+            "inact": -1,
+            "lstchg": 19103,
+            "max": 99999,
+            "min": 0,
+            "name": "testuser",
+            "passwd": "$5$k69zJBp1LxA3q8az$XKEp1knAex0j.xoi/sdU4XllHpZ0JzYYRfASKGl6qZA",
+            "warn": 7,
+        }
+    }
+    user_shadow2 = {
+        "minion": {
+            "expire": -1,
+            "inact": -1,
+            "lstchg": 19103,
+            "max": 99999,
+            "min": 0,
+            "name": "testuser",
+            "passwd": "$5$k69zJBp1LxA3q8az$XKEp1knAex0j.xoi/sdU4XllHpZ0JzYYRfASKGl6qZA",
+            "warn": 7,
+        }
+    }
+    user_shadow3 = {
+        "minion": {
+            "expire": -1,
+            "inact": -1,
+            "lstchg": 19103,
+            "max": 99999,
+            "min": 0,
+            "name": "testuser",
+            "passwd": "$5$k69zJBp1LxA3q8az$XKEp1knAex0j.xoi/sdU4XllHpZ0JzYYRfASKGl6qZA",
+            "warn": 7,
+        }
+    }
+
+    fileexists = {"minion": True}
+
+    user_sls_contents = {
+        "user-testuser": {
+            "user.present": [
+                {"name": "testuser"},
+                {"uid": 1000},
+                {"gid": 1000},
+                {"allow_uid_change": True},
+                {"allow_gid_change": True},
+                {"home": "/home/testuser"},
+                {"shell": "/usr/bin/zsh"},
+                {"groups": ["adm"]},
+                {"password": '{{ salt["pillar.get"]("users:testuser","*") }}'},
+                {"enforce_password": True},
+                {"date": 19103},
+                {"mindays": 0},
+                {"maxdays": 99999},
+                {"inactdays": -1},
+                {"expire": -1},
+                {"createhome": True},
+            ]
+        }
+    }
+
+    user_sls = yaml.dump(user_sls_contents)
+
+    user_pillar_contents = {
+        "users": {"testuser": "$5$k69zJBp1LxA3q8az$XKEp1knAex0j.xoi/sdU4XllHpZ0JzYYRfASKGl6qZA"},
+    }
+
+    user_pillar = yaml.dump(user_pillar_contents)
+
+    with patch.dict(
+        salt_describe_user_runner.__salt__,
+        {
+            "salt.execute": MagicMock(
+                side_effect=[
+                    user_getent,
+                    user_shadow,
+                    fileexists,
+                    user_shadow2,
+                    fileexists,
+                    user_shadow3,
+                    fileexists,
+                ]
+            )
+        },
+    ):
+        with patch.object(salt_describe_user_runner, "generate_files") as generate_files_mock:
+            with patch.object(
+                salt_describe_user_runner, "generate_pillars"
+            ) as generate_pillars_mock:
+                assert "Generated SLS file locations" in salt_describe_user_runner.user(
+                    "minion", minimum_uid=999, maximum_uid=1001
+                )
+                generate_files_mock.assert_called_with(
+                    {}, "minion", user_sls, sls_name="users", config_system="salt"
+                )
+                generate_pillars_mock.assert_called_with(
+                    {}, "minion", user_pillar, sls_name="users"
+                )
