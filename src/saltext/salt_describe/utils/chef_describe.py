@@ -24,4 +24,4 @@ def generate_files(opts, minion, state, sls_name="default", env="base", root=Non
     with salt.utils.files.fopen(minion_state_file, "w") as fp_:
         fp_.write(state)
 
-    return True
+    return minion_state_file
