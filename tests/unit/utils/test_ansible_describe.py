@@ -24,12 +24,12 @@ def test_generate_files(tmp_path):
 
     yml = yaml.dump(yml_contents)
     root = tmp_path / "ansible" / "minion"
+    yml_file = root / "file.yml"
     assert (
         ansible_describe_util.generate_files(
             {}, "minion", yml, sls_name="file", env="prod", root=tmp_path
         )
-        is True
+        == yml_file
     )
-    yml_file = root / "file.yml"
     assert yml_file.exists()
     assert yaml.safe_load(yml_file.read_text()) == yml_contents
