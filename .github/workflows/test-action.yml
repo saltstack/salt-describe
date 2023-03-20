@@ -1,13 +1,16 @@
-
 name: Testing
 
-on: [push, pull_request]
+on:
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
 
 jobs:
   Linux:
     runs-on: ubuntu-latest
-    needs: Pre-Commit
-
     timeout-minutes: 15
 
     strategy:
@@ -129,8 +132,6 @@ jobs:
 
   Windows:
     runs-on: windows-latest
-    needs: Pre-Commit
-
     timeout-minutes: 40
 
     strategy:
@@ -263,8 +264,6 @@ jobs:
 
   macOS:
     runs-on: macOS-latest
-    needs: Pre-Commit
-
     timeout-minutes: 40
 
     strategy:

@@ -7,6 +7,9 @@ on:
         required: false
         type: boolean
         default: false
+      version:
+        required: false
+        type: string
     secrets:
       PYPI_API_TOKEN:
         required: false
@@ -67,11 +70,9 @@ jobs:
     name: Python Package
     if: ${{ inputs.release && success() }}
     uses: ./.github/workflows/package-action.yml
-    if: always()
     needs:
       - pre-commit
     with:
-      release: ${{ inputs.release }}
       version: "${{ inputs.version }}"
 
   # upload-build-artifacts:
