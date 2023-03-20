@@ -75,102 +75,85 @@ jobs:
     with:
       version: "${{ inputs.version }}"
 
-  # upload-build-artifacts:
-  #   name: Deploy Prebuilt Python Builds
-  #   if: ${{ inputs.kind == 'release' && success() }}
-  #   uses: ./.github/workflows/deploy-build-action.yml
-  #   needs:
-  #     - build-python-package
-  #     - build
-  #   with:
-  #     version: "${{ needs.build-python-package.outputs.version }}"
-  #   secrets:
-  #     SSHKEY: "${{ secrets.SSHKEY }}"
+  deploy-python-package-test-pypi:
+    name: Deploy Python Package (Test PyPI)
+    uses: ./.github/workflows/deploy-package-action.yml
+    if: ${{ inputs.release && success() }}
+    needs:
+      - pre-commit
+      - test
+      - docs
+      - build-python-package
+    secrets:
+      TEST_PYPI_API_TOKEN: "${{ secrets.TEST_PYPI_API_TOKEN }}"
 
-  # upload-toolchain-artifacts:
-  #   name: Deploy Toolchain
-  #   if: ${{ inputs.kind == 'release' && success() }}
-  #   uses: ./.github/workflows/deploy-toolchain-action.yml
-  #   needs:
-  #     - build-python-package
-  #     - toolchain
-  #   with:
-  #     version: "${{ needs.build-python-package.outputs.version }}"
-  #   secrets:
-  #     SSHKEY: "${{ secrets.SSHKEY }}"
+  deploy-python-package:
+    name: Deploy Python Package (PyPI)
+    uses: ./.github/workflows/deploy-package-action.yml
+    if: ${{ inputs.release && success() }}
+    needs:
+      - pre-commit
+      - test
+      - docs
+      - build-python-package
+    secrets:
+      PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
+    with:
+      test: false
 
-  # deploy-python-package:
-  #   name: Deploy Python Package
-  #   uses: ./.github/workflows/deploy-package-action.yml
-  #   if: ${{ inputs.kind == 'release' && success() }}
-  #   needs:
-  #     - pre-commit
-  #     - test
-  #     - docs
-  #     - build-python-package
-  #     - upload-build-artifacts
-  #     - upload-toolchain-artifacts
-  #   secrets:
-  #     PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
-  #   #with:
-  #   #  version: "${{ needs.build-python-package.outputs.version }}"
+  push-tag:
+    name: Push Version Tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: ${{ inputs.release && success() }}
+    needs:
+      - build-python-package
+      - deploy-python-package
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Push Tag
+        uses: rickstaa/action-create-tag@v1
+        with:
+          tag: "v${{ inputs.version }}"
+          message: "Version ${{ inputs.version }}"
 
-  # push-tag:
-  #   name: Push Version Tag
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write
-  #   if: ${{ inputs.kind == 'release' && success() }}
-  #   needs:
-  #     - build-python-package
-  #     - deploy-python-package
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v3
-  #     - name: Push Tag
-  #       uses: rickstaa/action-create-tag@v1
-  #       with:
-  #         tag: "v${{ needs.build-python-package.outputs.version }}"
-  #         message: "Version ${{ needs.build-python-package.outputs.version }}"
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the CI Pipeline Exit Status
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - pre-commit
+      - test
+      - docs
+      - build-python-package
+      - deploy-python-package-test-pypi
+      - deploy-python-package
+      - push-tag
+    steps:
+    - name: Download Exit Status Files
+      if: always()
+      uses: actions/download-artifact@v3
+      with:
+        name: exitstatus
+        path: exitstatus
 
-  # set-pipeline-exit-status:
-  #   # This step is just so we can make github require this step, to pass checks
-  #   # on a pull request instead of requiring all
-  #   name: Set the CI Pipeline Exit Status
-  #   runs-on: ubuntu-latest
-  #   if: always()
-  #   needs:
-  #     - pre-commit
-  #     - build
-  #     - toolchain
-  #     - test
-  #     - docs
-  #     - build-python-package
-  #     - upload-build-artifacts
-  #     - upload-toolchain-artifacts
-  #     - deploy-python-package
-  #     - push-tag
-  #   steps:
-  #   - name: Download Exit Status Files
-  #     if: always()
-  #     uses: actions/download-artifact@v3
-  #     with:
-  #       name: exitstatus
-  #       path: exitstatus
+    - name: Delete Exit Status Artifacts
+      if: always()
+      uses: geekyeggo/delete-artifact@v2
+      with:
+        name: exitstatus
+        failOnError: false
 
-  #   - name: Delete Exit Status Artifacts
-  #     if: always()
-  #     uses: geekyeggo/delete-artifact@v2
-  #     with:
-  #       name: exitstatus
-  #       failOnError: false
+    - name: Set Pipeline Exit Status
+      run: |
+        tree exitstatus
+        grep -RE 'failure|cancelled' exitstatus/ && exit 1 || exit 0
 
-  #   - name: Set Pipeline Exit Status
-  #     run: |
-  #       tree exitstatus
-  #       grep -RE 'failure|cancelled' exitstatus/ && exit 1 || exit 0
-
-  #   - name: Done
-  #     if: always()
-  #     run:
-  #       echo "All worflows finished"
+    - name: Done
+      if: always()
+      run:
+        echo "All workflows finished"

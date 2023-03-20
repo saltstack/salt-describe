@@ -130,6 +130,12 @@ jobs:
         name: runtests-${{ runner.os }}-py${{ matrix.python-version }}-Salt${{ matrix.salt-version }}.log
         path: artifacts/runtests-*.log
 
+    - name: Set Exit Status
+      if: always()
+      run: |
+        mkdir exitstatus
+        echo "${{ job.status }}" > exitstatus/${{ github.job }}
+
   Windows:
     runs-on: windows-latest
     timeout-minutes: 40
@@ -262,6 +268,12 @@ jobs:
         name: runtests-${{ runner.os }}-py${{ matrix.python-version }}-Salt${{ matrix.salt-version }}.log
         path: artifacts/runtests-*.log
 
+    - name: Set Exit Status
+      if: always()
+      run: |
+        mkdir exitstatus
+        echo "${{ job.status }}" > exitstatus/${{ github.job }}
+
   macOS:
     runs-on: macOS-latest
     timeout-minutes: 40
@@ -378,3 +390,9 @@ jobs:
       with:
         name: runtests-${{ runner.os }}-py${{ matrix.python-version }}-Salt${{ matrix.salt-version }}.log
         path: artifacts/runtests-*.log
+
+    - name: Set Exit Status
+      if: always()
+      run: |
+        mkdir exitstatus
+        echo "${{ job.status }}" > exitstatus/${{ github.job }}

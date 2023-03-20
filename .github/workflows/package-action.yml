@@ -42,3 +42,9 @@ jobs:
           name: salt-describe-${{ inputs.version }}-packages
           path: dist/*
           retention-days: 5
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}
