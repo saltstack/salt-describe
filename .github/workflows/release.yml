@@ -1,0 +1,23 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  ci:
+    name: CI
+    permissions:
+      contents: write
+      pull-requests: read
+    uses: ./.github/workflows/ci.yml
+    if: contains('["garethgreenaway","MKLeb","Ch3LL","whytewolf"]', github.actor)
+    with:
+      release: true
+      kind: "${{ inputs.version }}"
+    secrets:
+      TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
