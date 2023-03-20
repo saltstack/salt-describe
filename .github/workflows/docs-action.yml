@@ -35,3 +35,9 @@ jobs:
         SKIP_REQUIREMENTS_INSTALL: YES
       run: |
         nox --force-color -e docs
+
+    - name: Set Exit Status
+      if: always()
+      run: |
+        mkdir exitstatus
+        echo "${{ job.status }}" > exitstatus/${{ github.job }}

@@ -1,0 +1,37 @@
+name: Deploy Salt Describe Python Package
+
+on:
+  workflow_call:
+    inputs:
+      test:
+        required: false
+        default: true
+    secrets:
+      PYPI_API_TOKEN:
+        required: false
+      TEST_PYPI_API_TOKEN:
+        required: false
+
+jobs:
+  build:
+    name: Publish Python Wheel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Python Package Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-describe-${{ inputs.version }}-packages
+          path: dist
+
+      - name: Publish distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        if: ${{ inputs.test }}
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        if: ${{ !inputs.test }}
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
