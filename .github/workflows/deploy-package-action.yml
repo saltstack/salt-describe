@@ -4,8 +4,12 @@ on:
   workflow_call:
     inputs:
       test:
+        type: boolean
         required: false
         default: true
+      version:
+        type: string
+        required: true
     secrets:
       PYPI_API_TOKEN:
         required: false

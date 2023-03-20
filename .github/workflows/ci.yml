@@ -86,6 +86,8 @@ jobs:
       - build-python-package
     secrets:
       TEST_PYPI_API_TOKEN: "${{ secrets.TEST_PYPI_API_TOKEN }}"
+    with:
+      version: "${{ inputs.version }}"
 
   deploy-python-package:
     name: Deploy Python Package (PyPI)
@@ -100,6 +102,7 @@ jobs:
       PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
     with:
       test: false
+      version: "${{ inputs.version }}"
 
   push-tag:
     name: Push Version Tag
