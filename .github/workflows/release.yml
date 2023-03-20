@@ -17,7 +17,7 @@ jobs:
     if: contains('["garethgreenaway","MKLeb","Ch3LL","whytewolf"]', github.actor)
     with:
       release: true
-      kind: "${{ inputs.version }}"
+      version: "${{ inputs.version }}"
     secrets:
       TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
       PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}

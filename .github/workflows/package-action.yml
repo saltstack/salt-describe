@@ -26,6 +26,12 @@ jobs:
           build
           --user
 
+      - name: Echo Version
+        run: echo "${{ inputs.version }}"
+
+      - name: Setup Version
+        run: echo "${{ inputs.version }}" > version.txt
+
       - name: Build Wheel
         run: python -m build --outdir dist/
 
