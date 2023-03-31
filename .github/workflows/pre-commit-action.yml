@@ -10,7 +10,7 @@ on:
 
 jobs:
   Pre-Commit:
-    name: Relenv
+    name: Pre-Commit
     runs-on: ubuntu-latest
     container:
       image: python:3.8.6-slim-buster
