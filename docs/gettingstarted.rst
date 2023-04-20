@@ -59,13 +59,13 @@ If you are using onedir Salt packages, you need to run the following:
 
 .. code-block:: bash
 
-   # salt-pip install salt-describe
+   # salt-pip install saltext.salt-describe
 
 If you are using the Salt pip packages, you need to run the following:
 
 .. code-block:: bash
 
-   # pip install salt-describe
+   # pip install saltext.salt-describe
 
 
 How to use Salt describe
