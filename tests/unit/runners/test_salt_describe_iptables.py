@@ -3,6 +3,7 @@
 #
 import logging
 from pathlib import PosixPath
+from pathlib import WindowsPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -146,7 +147,9 @@ def test_iptables_permission_denied(tmp_path, caplog, minion_opts):
         {"salt.execute": MagicMock(return_value=iptables_ret)},
     ):
         with patch.dict(salt_describe_iptables_runner.__opts__, minion_opts):
-            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError), patch.object(
+                WindowsPath, "mkdir", side_effect=PermissionError
+            ):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_iptables_runner.iptables("minion")
                     assert not ret

@@ -4,6 +4,7 @@
 # pylint: disable=line-too-long
 import logging
 from pathlib import PosixPath
+from pathlib import WindowsPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -206,7 +207,9 @@ def test_cron_permissioned_denied(minion_opts, caplog, cron_ret):
         salt_describe_cron_runner.__salt__, {"salt.execute": MagicMock(return_value=cron_ret)}
     ):
         with patch.dict(salt_describe_cron_runner.__opts__, minion_opts):
-            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError), patch.object(
+                WindowsPath, "mkdir", side_effect=PermissionError
+            ):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_cron_runner.cron("minion")
                     assert not ret
