@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
+from pathlib import PosixPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -547,3 +548,71 @@ def test_pkgrepo_debian():
                 generate_mock.assert_called_with(
                     {}, "minion", debian_sls, sls_name="pkgrepo", config_system="salt"
                 )
+
+
+def test_pkgrepo_permission_denied(minion_opts, caplog):
+    pkgrepo_list = {
+        "minion": {
+            "baseos": {
+                "name": "CentOS Stream $releasever - BaseOS",
+                "metalink": "https://mirrors.centos.org/metalink?repo=centos-baseos-$stream&arch=$basearch&protocol=https,http",
+                "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial",
+                "gpgcheck": "1",
+                "repo_gpgcheck": "0",
+                "metadata_expire": "6h",
+                "countme": "1",
+                "enabled": "1",
+                "file": "/etc/yum.repos.d/centos.repo",
+            },
+            "baseos-source": {
+                "name": "CentOS Stream $releasever - BaseOS - Source",
+                "metalink": "https://mirrors.centos.org/metalink?repo=centos-baseos-source-$stream&arch=source&protocol=https,http",
+                "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial",
+                "gpgcheck": "1",
+                "repo_gpgcheck": "0",
+                "metadata_expire": "6h",
+                "enabled": "0",
+                "file": "/etc/yum.repos.d/centos.repo",
+            },
+            "appstream": {
+                "name": "CentOS Stream $releasever - AppStream",
+                "metalink": "https://mirrors.centos.org/metalink?repo=centos-appstream-$stream&arch=$basearch&protocol=https,http",
+                "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial",
+                "gpgcheck": "1",
+                "repo_gpgcheck": "0",
+                "metadata_expire": "6h",
+                "countme": "1",
+                "enabled": "1",
+                "file": "/etc/yum.repos.d/centos.repo",
+            },
+            "appstream-source": {
+                "name": "CentOS Stream $releasever - AppStream - Source",
+                "metalink": "https://mirrors.centos.org/metalink?repo=centos-appstream-source-$stream&arch=source&protocol=https,http",
+                "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial",
+                "gpgcheck": "1",
+                "repo_gpgcheck": "0",
+                "metadata_expire": "6h",
+                "enabled": "0",
+                "file": "/etc/yum.repos.d/centos.repo",
+            },
+        }
+    }
+
+    mock_minion_data = ({}, {"os_family": "RedHat"}, {})
+
+    with patch.dict(
+        salt_describe_pkgrepo_runner.__salt__,
+        {"salt.execute": MagicMock(return_value=pkgrepo_list)},
+    ):
+        with patch(
+            "salt.utils.minions.get_minion_data", MagicMock(return_value=mock_minion_data)
+        ) as minion_data_mock:
+            with patch.dict(salt_describe_pkgrepo_runner.__opts__, minion_opts):
+                with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                    with caplog.at_level(logging.WARNING):
+                        ret = salt_describe_pkgrepo_runner.pkgrepo("minion")
+                        assert not ret
+                        assert (
+                            "Unable to create directory /srv/salt/minion.  "
+                            "Check that the salt user has the correct permissions."
+                        ) in caplog.text

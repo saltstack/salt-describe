@@ -176,11 +176,7 @@ def cron(tgt, user="root", include_pre=True, tgt_type="glob", config_system="sal
 
         sls_yaml = yaml.dump(final_sls)
         sls_files.append(
-            str(
-                generate_files(
-                    __opts__, minion, sls_yaml, sls_name="cron", config_system=config_system
-                )
-            )
+            generate_files(__opts__, minion, sls_yaml, sls_name="cron", config_system=config_system)
         )
 
     return ret_info(sls_files, mod=mod_name)

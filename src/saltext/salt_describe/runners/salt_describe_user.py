@@ -123,11 +123,7 @@ def user(
         state = yaml.dump(state_contents)
         pillars = yaml.dump(pillars)
         sls_files.append(
-            str(
-                generate_files(
-                    __opts__, minion, state, sls_name="users", config_system=config_system
-                )
-            )
+            generate_files(__opts__, minion, state, sls_name="users", config_system=config_system)
         )
         generate_pillars(__opts__, minion, pillars, sls_name="users")
     return ret_info(sls_files, mod=mod_name)
@@ -175,11 +171,7 @@ def group(
         state = yaml.dump(state_contents)
 
         sls_files.append(
-            str(
-                generate_files(
-                    __opts__, minion, state, sls_name="groups", config_system=config_system
-                )
-            )
+            generate_files(__opts__, minion, state, sls_name="groups", config_system=config_system)
         )
 
     return ret_info(sls_files, mod=mod_name)

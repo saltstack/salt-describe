@@ -93,9 +93,7 @@ def pip(tgt, tgt_type="glob", bin_env=None, config_system="salt", **kwargs):
         state = yaml.dump(state_contents)
 
         sls_files.append(
-            str(
-                generate_files(__opts__, minion, state, sls_name="pip", config_system=config_system)
-            )
+            generate_files(__opts__, minion, state, sls_name="pip", config_system=config_system)
         )
 
     return ret_info(sls_files, mod=mod_name)

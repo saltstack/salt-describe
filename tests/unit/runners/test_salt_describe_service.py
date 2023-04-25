@@ -3,6 +3,7 @@
 #
 import logging
 import sys
+from pathlib import PosixPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -240,3 +241,45 @@ end
             generate_mock.assert_called_with(
                 {}, "minion", service_rb_contents, sls_name="service", config_system="chef"
             )
+
+
+def test_service_permission_denied(minion_opts, caplog):
+
+    if sys.platform.startswith("darwin"):
+        enabled_retval = {"minion": ["com.saltstack.salt.master", "com.saltstack.salt.minion"]}
+
+        list_retval = {
+            "minion": "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
+        }
+
+        disabled_retval = {"minion": "'service.get_disabled' is not available."}
+
+        execute_retvals = [enabled_retval, disabled_retval, list_retval]
+    else:
+        enabled_retval = {"minion": ["salt-master", "salt-api"]}
+
+        status_retval = {
+            "minion": {
+                "salt-master": True,
+                "salt-minion": True,
+                "salt-api": False,
+                "random-service": True,
+            },
+        }
+        disabled_retval = {"minion": ["salt-minion"]}
+
+        execute_retvals = [enabled_retval, disabled_retval, status_retval]
+
+    with patch.dict(
+        salt_describe_service_runner.__salt__,
+        {"salt.execute": MagicMock(side_effect=execute_retvals)},
+    ):
+        with patch.dict(salt_describe_service_runner.__opts__, minion_opts):
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                with caplog.at_level(logging.WARNING):
+                    ret = salt_describe_service_runner.service("minion")
+                    assert not ret
+                    assert (
+                        "Unable to create directory /srv/salt/minion.  "
+                        "Check that the salt user has the correct permissions."
+                    ) in caplog.text

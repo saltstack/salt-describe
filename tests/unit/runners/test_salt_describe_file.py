@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
+from pathlib import PosixPath
 from unittest.mock import MagicMock
 from unittest.mock import mock_open
 from unittest.mock import patch
@@ -66,3 +67,40 @@ def test_file(tmp_path):
                     )
                     get_minion_root_mock.assert_called_with({}, "minion", config_system="salt")
                     open_mock().write.assert_called_with("contents of testfile")
+
+
+def test_file_permissioned_denied(tmp_path, minion_opts, caplog):
+    testfile = tmp_path / "testfile"
+    file_sls_contents = {
+        str(testfile): {
+            "file.managed": [
+                {
+                    "source": f"salt://minion/files/{testfile}",
+                    "user": "testuser",
+                    "group": "testgrp",
+                    "mode": "0o664",
+                },
+            ],
+        },
+    }
+
+    file_sls = yaml.dump(file_sls_contents)
+    read_retval = {"minion": "contents of testfile"}
+    stats_retval = {
+        "minion": {
+            "user": "testuser",
+            "group": "testgrp",
+            "mode": "0o664",
+        },
+    }
+    execute_retvals = [read_retval, stats_retval]
+
+    with patch.dict(
+        salt_describe_file_runner.__salt__, {"salt.execute": MagicMock(side_effect=execute_retvals)}
+    ):
+        with patch.dict(salt_describe_file_runner.__opts__, minion_opts):
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                with caplog.at_level(logging.WARNING):
+                    ret = salt_describe_file_runner.file("minion", str(testfile))
+                    assert not ret
+                    assert "Unable to create directory /srv/salt/minion/files" in caplog.text

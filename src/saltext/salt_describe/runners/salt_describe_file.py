@@ -94,17 +94,20 @@ def file(tgt, paths, tgt_type="glob", config_system="salt"):
         for path in file_contents[minion]:
             path_obj = pathlib.Path(path)
             path_file = minion_state_root / "files" / path_obj.relative_to(path_obj.anchor)
-            path_file.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                path_file.parent.mkdir(parents=True, exist_ok=True)
+            except PermissionError:
+                log.warning(
+                    f"Unable to create directory {str(path_file.parent)}.  "
+                    "Check that the salt user has the correct permissions."
+                )
+                return False
 
             with salt.utils.files.fopen(path_file, "w") as fp_:
                 fp_.write(file_contents[minion][path])
 
         sls_files.append(
-            str(
-                generate_files(
-                    __opts__, minion, state, sls_name="files", config_system=config_system
-                )
-            )
+            generate_files(__opts__, minion, state, sls_name="files", config_system=config_system)
         )
 
     return ret_info(sls_files, mod=mod_name)

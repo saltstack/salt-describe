@@ -3,6 +3,7 @@
 #
 # pylint: disable=line-too-long
 import logging
+from pathlib import PosixPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -23,8 +24,9 @@ def configure_loader_modules():
     }
 
 
-def test_cron(tmp_path):
-    cron_ret = {
+@pytest.fixture
+def cron_ret():
+    yield {
         "minion": {
             "pre": [
                 '10 12 * * 4 echo "hello there!"',
@@ -80,6 +82,8 @@ def test_cron(tmp_path):
         },
     }
 
+
+def test_cron(tmp_path, cron_ret):
     expected_sls = {
         "FENDER": {
             "cron.env_present": [
@@ -195,6 +199,21 @@ def test_cron_crontab_unavailable(tmp_path):
     ):
         with patch.object(salt_describe_cron_runner, "generate_files") as generate_mock:
             assert not salt_describe_cron_runner.cron("minion", user)
+
+
+def test_cron_permissioned_denied(minion_opts, caplog, cron_ret):
+    with patch.dict(
+        salt_describe_cron_runner.__salt__, {"salt.execute": MagicMock(return_value=cron_ret)}
+    ):
+        with patch.dict(salt_describe_cron_runner.__opts__, minion_opts):
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                with caplog.at_level(logging.WARNING):
+                    ret = salt_describe_cron_runner.cron("minion")
+                    assert not ret
+                    assert (
+                        "Unable to create directory /srv/salt/minion.  "
+                        "Check that the salt user has the correct permissions."
+                    ) in caplog.text
 
 
 # pylint: enable=line-too-long

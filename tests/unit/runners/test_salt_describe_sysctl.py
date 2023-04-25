@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
+from pathlib import PosixPath
 from unittest.mock import call
 from unittest.mock import MagicMock
 from unittest.mock import mock_open
@@ -47,3 +48,20 @@ def test_sysctl():
             generate_mock.assert_called_with(
                 {}, "minion", sysctl_sls, sls_name="sysctl", config_system="salt"
             )
+
+
+def test_sysctl_permission_denied(caplog, minion_opts):
+    sysctl_show = {"minion": {"vm.swappiness": 60, "vm.vfs_cache_pressure": 100}}
+
+    with patch.dict(
+        salt_describe_sysctl_runner.__salt__, {"salt.execute": MagicMock(return_value=sysctl_show)}
+    ):
+        with patch.dict(salt_describe_sysctl_runner.__opts__, minion_opts):
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                with caplog.at_level(logging.WARNING):
+                    ret = salt_describe_sysctl_runner.sysctl("minion", ["vm.swappiness"])
+                    assert not ret
+                    assert (
+                        "Unable to create directory /srv/salt/minion.  "
+                        "Check that the salt user has the correct permissions."
+                    ) in caplog.text
