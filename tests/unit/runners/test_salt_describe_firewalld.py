@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
+from pathlib import PosixPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -22,11 +23,9 @@ def configure_loader_modules():
     }
 
 
-def test_firewalld():
-    """
-    test describe.firewalld
-    """
-    firewalld_ret = {
+@pytest.fixture
+def firewalld_ret():
+    yield {
         "minion": {
             "public": {
                 "target": ["default"],
@@ -46,6 +45,11 @@ def test_firewalld():
         }
     }
 
+
+def test_firewalld(firewalld_ret):
+    """
+    test describe.firewalld
+    """
     firewalld_sls_contents = {
         "add_firewalld_rule_0": {
             "firewalld.present": [{"name": "public"}, {"services": ["dhcpv6-client", "ssh"]}]
@@ -80,3 +84,19 @@ def test_firewalld_unavailable():
     ):
         with patch.object(salt_describe_firewalld_runner, "generate_files") as generate_mock:
             ret = salt_describe_firewalld_runner.firewalld("minion")
+
+
+def test_firewalld_permissioned_denied(minion_opts, caplog, firewalld_ret):
+    with patch.dict(
+        salt_describe_firewalld_runner.__salt__,
+        {"salt.execute": MagicMock(return_value=firewalld_ret)},
+    ):
+        with patch.dict(salt_describe_firewalld_runner.__opts__, minion_opts):
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                with caplog.at_level(logging.WARNING):
+                    ret = salt_describe_firewalld_runner.firewalld("minion")
+                    assert not ret
+                    assert (
+                        "Unable to create directory /srv/salt/minion.  "
+                        "Check that the salt user has the correct permissions."
+                    ) in caplog.text

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
+from pathlib import PosixPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -97,3 +98,59 @@ def test_iptables(tmp_path):
             generate_mock.assert_called_with(
                 {}, "minion", iptables_sls, sls_name="iptables", config_system="salt"
             )
+
+
+def test_iptables_permission_denied(tmp_path, caplog, minion_opts):
+    """
+    test describe.iptables
+    """
+    iptables_ret = {
+        "minion": {
+            "filter": {
+                "INPUT": {
+                    "policy": "ACCEPT",
+                    "packet count": "319",
+                    "byte count": "57738",
+                    "rules": [
+                        {"source": ["203.0.113.51/32"], "jump": ["DROP"]},
+                        {
+                            "protocol": ["tcp"],
+                            "jump": ["ACCEPT"],
+                            "in-interface": ["eth0"],
+                            "match": ["tcp"],
+                            "destination_port": ["22"],
+                        },
+                    ],
+                    "rules_comment": {},
+                },
+                "FORWARD": {
+                    "policy": "ACCEPT",
+                    "packet count": "0",
+                    "byte count": "0",
+                    "rules": [],
+                    "rules_comment": {},
+                },
+                "OUTPUT": {
+                    "policy": "ACCEPT",
+                    "packet count": "331",
+                    "byte count": "33780",
+                    "rules": [],
+                    "rules_comment": {},
+                },
+            }
+        }
+    }
+
+    with patch.dict(
+        salt_describe_iptables_runner.__salt__,
+        {"salt.execute": MagicMock(return_value=iptables_ret)},
+    ):
+        with patch.dict(salt_describe_iptables_runner.__opts__, minion_opts):
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                with caplog.at_level(logging.WARNING):
+                    ret = salt_describe_iptables_runner.iptables("minion")
+                    assert not ret
+                    assert (
+                        "Unable to create directory /srv/salt/minion.  "
+                        "Check that the salt user has the correct permissions."
+                    ) in caplog.text

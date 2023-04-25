@@ -3,6 +3,7 @@
 #
 import json
 import logging
+from pathlib import PosixPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -288,3 +289,79 @@ def test_user_minimum_maximum_uid():
                 generate_pillars_mock.assert_called_with(
                     {}, "minion", user_pillar, sls_name="users"
                 )
+
+
+def test_group_permission_denied(minion_opts, caplog):
+    group_getent = {
+        "minion": [
+            {"gid": 4, "members": ["syslog", "whytewolf"], "name": "adm", "passwd": "x"},
+            {"gid": 0, "members": [], "name": "root", "passwd": "x"},
+        ]
+    }
+
+    with patch.dict(
+        salt_describe_user_runner.__salt__, {"salt.execute": MagicMock(return_value=group_getent)}
+    ):
+        with patch.dict(salt_describe_user_runner.__opts__, minion_opts):
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                with caplog.at_level(logging.WARNING):
+                    ret = salt_describe_user_runner.group("minion")
+                    assert not ret
+                    assert (
+                        "Unable to create directory /srv/salt/minion.  "
+                        "Check that the salt user has the correct permissions."
+                    ) in caplog.text
+
+
+def test_user_permission_denied(minion_opts, caplog):
+    user_getent = {
+        "minion": [
+            {
+                "name": "testuser",
+                "uid": 1000,
+                "gid": 1000,
+                "groups": ["adm"],
+                "home": "/home/testuser",
+                "passwd": "x",
+                "shell": "/usr/bin/zsh",
+                "fullname": "",
+                "homephone": "",
+                "other": "",
+                "roomnumber": "",
+                "workphone": "",
+            }
+        ]
+    }
+
+    user_shadow = {
+        "minion": {
+            "expire": -1,
+            "inact": -1,
+            "lstchg": 19103,
+            "max": 99999,
+            "min": 0,
+            "name": "testuser",
+            "passwd": "$5$k69zJBp1LxA3q8az$XKEp1knAex0j.xoi/sdU4XllHpZ0JzYYRfASKGl6qZA",
+            "warn": 7,
+        }
+    }
+
+    fileexists = {"minion": True}
+
+    user_pillar_contents = {
+        "users": {"testuser": "$5$k69zJBp1LxA3q8az$XKEp1knAex0j.xoi/sdU4XllHpZ0JzYYRfASKGl6qZA"},
+    }
+
+    with patch.dict(
+        salt_describe_user_runner.__salt__,
+        {"salt.execute": MagicMock(side_effect=[user_getent, user_shadow, fileexists])},
+    ):
+        with patch.dict(salt_describe_user_runner.__opts__, minion_opts):
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                with caplog.at_level(logging.WARNING):
+                    ret = salt_describe_user_runner.user("minion")
+                    assert not ret
+                    assert (
+                        "Unable to create directory /srv/salt/minion.  "
+                        "Check that the salt user has the correct permissions."
+                    ) in caplog.text

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
+from pathlib import PosixPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -85,3 +86,26 @@ def test_pip_ansible():
                 sls_name="pip",
                 config_system="ansible",
             )
+
+
+def test_pip_permission_denied(minion_opts, caplog):
+    pip_list = {
+        "minion": [
+            "requests==0.1.2",
+            "salt==3004.1",
+            "argcomplete==2.3.4-5",
+        ],
+    }
+
+    with patch.dict(
+        salt_describe_pip_runner.__salt__, {"salt.execute": MagicMock(return_value=pip_list)}
+    ):
+        with patch.dict(salt_describe_pip_runner.__opts__, minion_opts):
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                with caplog.at_level(logging.WARNING):
+                    ret = salt_describe_pip_runner.pip("minion")
+                    assert not ret
+                    assert (
+                        "Unable to create directory /srv/salt/minion.  "
+                        "Check that the salt user has the correct permissions."
+                    ) in caplog.text

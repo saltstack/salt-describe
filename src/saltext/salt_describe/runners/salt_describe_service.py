@@ -210,11 +210,7 @@ def service(tgt, tgt_type="glob", config_system="salt", **kwargs):
         else:
             state = "\n".join(state_contents)
         sls_files.append(
-            str(
-                generate_files(
-                    __opts__, minion, state, sls_name="service", config_system=config_system
-                )
-            )
+            generate_files(__opts__, minion, state, sls_name="service", config_system=config_system)
         )
 
     return ret_info(sls_files, mod=mod_name)

@@ -56,10 +56,8 @@ def timezone(tgt, tgt_type="glob", config_system="salt"):
         state = yaml.dump(state_contents)
 
         sls_files.append(
-            str(
-                generate_files(
-                    __opts__, minion, state, sls_name="timezone", config_system=config_system
-                )
+            generate_files(
+                __opts__, minion, state, sls_name="timezone", config_system=config_system
             )
         )
 

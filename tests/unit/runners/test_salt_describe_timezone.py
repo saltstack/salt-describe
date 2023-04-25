@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
+from pathlib import PosixPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -42,3 +43,27 @@ def test_timezone():
             generate_mock.assert_called_with(
                 {}, "minion", timezone_sls, sls_name="timezone", config_system="salt"
             )
+
+
+def test_timezone_permission_denied(minion_opts, caplog):
+    """
+    test describe.timezone
+    """
+    timezone_list = {"minion": "America/Los_Angeles"}
+
+    timezone_sls_contents = {"America/Los_Angeles": {"timezone.system": []}}
+    timezone_sls = yaml.dump(timezone_sls_contents)
+
+    with patch.dict(
+        salt_describe_timezone_runner.__salt__,
+        {"salt.execute": MagicMock(return_value=timezone_list)},
+    ):
+        with patch.dict(salt_describe_timezone_runner.__opts__, minion_opts):
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                with caplog.at_level(logging.WARNING):
+                    ret = salt_describe_timezone_runner.timezone("minion")
+                    assert not ret
+                    assert (
+                        "Unable to create directory /srv/salt/minion.  "
+                        "Check that the salt user has the correct permissions."
+                    ) in caplog.text

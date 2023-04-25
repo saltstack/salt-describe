@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
+from pathlib import PosixPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -62,3 +63,33 @@ def test_host():
             generate_mock.assert_called_with(
                 {}, "minion", host_sls, sls_name="host", config_system="salt"
             )
+
+
+def test_host_permissioned_denied(minion_opts, caplog):
+    """
+    test describe.host
+    """
+    host_list = {
+        "minion": {
+            "comment-0": ["# Host addresses"],
+            "comment-1": ["# comment"],
+            "127.0.0.1": {"aliases": ["localhost"]},
+            "127.0.1.1": {"aliases": ["megan-precision5550"]},
+            "::1": {"aliases": ["localhost", "ip6-localhost", "ip6-loopback"]},
+            "ff02::1": {"aliases": ["ip6-allnodes"]},
+            "ff02::2": {"aliases": ["ip6-allrouters"]},
+        }
+    }
+
+    with patch.dict(
+        salt_describe_host_runner.__salt__, {"salt.execute": MagicMock(return_value=host_list)}
+    ):
+        with patch.dict(salt_describe_host_runner.__opts__, minion_opts):
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+                with caplog.at_level(logging.WARNING):
+                    ret = salt_describe_host_runner.host("minion")
+                    assert not ret
+                    assert (
+                        "Unable to create directory /srv/salt/minion.  "
+                        "Check that the salt user has the correct permissions."
+                    ) in caplog.text

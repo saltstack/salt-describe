@@ -17,7 +17,11 @@ def generate_files(opts, minion, state, sls_name="default", env="base", config_s
     """
     config = getattr(saltext.salt_describe.utils, f"{config_system}_describe")
 
-    return config.generate_files(opts, minion, state, sls_name=sls_name, env=env)
+    res = config.generate_files(opts, minion, state, sls_name=sls_name, env=env)
+    if res:
+        return str(res)
+    else:
+        return res
 
 
 def get_minion_state_file_root(opts, minion, env="base", config_system="salt"):
@@ -30,7 +34,7 @@ def get_minion_state_file_root(opts, minion, env="base", config_system="salt"):
 
 
 def ret_info(sls_files, mod=None):
-    if not sls_files:
+    if not any(sls_files):
         if mod:
             log.error("Could not generate SLS file for %s", mod)
         return False

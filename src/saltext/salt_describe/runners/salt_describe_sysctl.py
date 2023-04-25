@@ -59,11 +59,7 @@ def sysctl(tgt, sysctl_items, tgt_type="glob", config_system="salt"):
 
         state = yaml.dump(state_contents)
         sls_files.append(
-            str(
-                generate_files(
-                    __opts__, minion, state, sls_name="sysctl", config_system=config_system
-                )
-            )
+            generate_files(__opts__, minion, state, sls_name="sysctl", config_system=config_system)
         )
 
     return ret_info(sls_files, mod=mod_name)

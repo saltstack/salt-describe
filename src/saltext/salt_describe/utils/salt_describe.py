@@ -1,12 +1,15 @@
 # Copyright 2023 VMware, Inc.
 # SPDX-License-Identifier: Apache-2.0
 #
+import logging
 import pathlib
 
 import salt.config
 import salt.syspaths
 import salt.utils.files
 import yaml
+
+log = logging.getLogger(__name__)
 
 
 def get_state_file_root(opts, env="base"):
@@ -42,7 +45,13 @@ def generate_files(opts, minion, state, sls_name="default", env="base"):
     Generate an sls file for the minion with given state contents
     """
     minion_state_root = get_minion_state_file_root(opts, minion, env=env)
-    minion_state_root.mkdir(parents=True, exist_ok=True)
+    try:
+        minion_state_root.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        log.warning(
+            f"Unable to create directory {str(minion_state_root)}.  Check that the salt user has the correct permissions."
+        )
+        return False
 
     minion_state_file = minion_state_root / f"{sls_name}.sls"
 
@@ -58,7 +67,13 @@ def generate_init(opts, minion=None, env="base"):
     Generate the init.sls for the minion or minions
     """
     minion_state_root = get_minion_state_file_root(opts, minion, env=env)
-    minion_state_root.mkdir(parents=True, exist_ok=True)
+    try:
+        minion_state_root.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        log.warning(
+            f"Unable to create directory {str(minion_state_root)}.  Check that the salt user has the correct permissions."
+        )
+        return False
 
     minion_init_file = minion_state_root / "init.sls"
 
@@ -81,7 +96,13 @@ def generate_pillar_init(opts, minion=None, env="base"):
     Generate the init.sls for the minion or minions
     """
     minion_pillar_root = get_minion_pillar_file_root(opts, minion, env=env)
-    minion_pillar_root.mkdir(parents=True, exist_ok=True)
+    try:
+        minion_pillar_root.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        log.warning(
+            f"Unable to create directory {str(minion_pillar_root)}.  Check that the salt user has the correct permissions."
+        )
+        return False
 
     minion_init_file = minion_pillar_root / "init.sls"
 
@@ -104,7 +125,13 @@ def generate_pillars(opts, minion, pillar, sls_name="default", env="base"):
     Generate pillar files for the minion to hold more sensitive information
     """
     minion_pillar_root = get_minion_pillar_file_root(opts, minion, env=env)
-    minion_pillar_root.mkdir(parents=True, exist_ok=True)
+    try:
+        minion_pillar_root.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        log.warning(
+            f"Unable to create directory {str(minion_pillar_root)}.  Check that the salt user has the correct permissions."
+        )
+        return False
 
     minion_pillar_file = minion_pillar_root / f"{sls_name}.sls"
 
