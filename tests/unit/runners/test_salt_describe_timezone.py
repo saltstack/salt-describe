@@ -3,6 +3,7 @@
 #
 import logging
 from pathlib import PosixPath
+from pathlib import WindowsPath
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -59,7 +60,9 @@ def test_timezone_permission_denied(minion_opts, caplog):
         {"salt.execute": MagicMock(return_value=timezone_list)},
     ):
         with patch.dict(salt_describe_timezone_runner.__opts__, minion_opts):
-            with patch.object(PosixPath, "mkdir", side_effect=PermissionError) as mock_mkdir:
+            with patch.object(PosixPath, "mkdir", side_effect=PermissionError), patch.object(
+                WindowsPath, "mkdir", side_effect=PermissionError
+            ):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_timezone_runner.timezone("minion")
                     assert not ret
