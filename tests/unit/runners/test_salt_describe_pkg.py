@@ -54,7 +54,7 @@ def test_pkg(minion_opts):
             )
 
 
-def test_pkg_permission_denied(minion_opts, caplog):
+def test_pkg_permission_denied(minion_opts, caplog, perm_denied_error_log):
     pkg_list = {
         "minion": {
             "pkg1": "0.1.2-3",
@@ -74,10 +74,7 @@ def test_pkg_permission_denied(minion_opts, caplog):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_pkg_runner.pkg("minion")
                     assert not ret
-                    assert (
-                        "Unable to create directory /srv/salt/minion.  "
-                        "Check that the salt user has the correct permissions."
-                    ) in caplog.text
+                    assert perm_denied_error_log in caplog.text
 
 
 def test_pkg_ansible():
@@ -204,7 +201,7 @@ end
 
 
 def test_pkg_ansible_permission_denied(minion_opts, caplog):
-    if sys.platform.startswith("windows"):
+    if sys.platform.startswith("win32"):
         perm_denied_error_log = (
             "Unable to create directory C:\\ProgramData\\Salt Project\\Salt\\srv\\ansible\\minion.  "
             "Check that the salt user has the correct permissions."
@@ -242,7 +239,7 @@ def test_pkg_ansible_permission_denied(minion_opts, caplog):
 
 
 def test_pkg_chef_permission_denied(minion_opts, caplog):
-    if sys.platform.startswith("windows"):
+    if sys.platform.startswith("win32"):
         perm_denied_error_log = (
             "Unable to create directory C:\\ProgramData\\Salt Project\\Salt\\srv\\chef\\minion.  "
             "Check that the salt user has the correct permissions."

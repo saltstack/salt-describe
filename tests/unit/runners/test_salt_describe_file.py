@@ -72,9 +72,9 @@ def test_file(tmp_path):
 
 
 def test_file_permission_denied(tmp_path, minion_opts, caplog):
-    if sys.platform.startswith("windows"):
+    if sys.platform.startswith("win32"):
         perm_denied_error_log = (
-            "Unable to create directory C:\\ProgramData\\Salt Project\\Salt\\srv\\salt\\minion"
+            "Unable to create directory " "C:\\ProgramData\\Salt Project\\Salt\\srv\\salt\\minion"
         )
     else:
         perm_denied_error_log = "Unable to create directory /srv/salt/minion"
