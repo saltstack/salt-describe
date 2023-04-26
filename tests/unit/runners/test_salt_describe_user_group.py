@@ -292,7 +292,7 @@ def test_user_minimum_maximum_uid():
                 )
 
 
-def test_group_permission_denied(minion_opts, caplog):
+def test_group_permission_denied(minion_opts, caplog, perm_denied_error_log):
     group_getent = {
         "minion": [
             {"gid": 4, "members": ["syslog", "whytewolf"], "name": "adm", "passwd": "x"},
@@ -310,13 +310,10 @@ def test_group_permission_denied(minion_opts, caplog):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_user_runner.group("minion")
                     assert not ret
-                    assert (
-                        "Unable to create directory /srv/salt/minion.  "
-                        "Check that the salt user has the correct permissions."
-                    ) in caplog.text
+                    assert perm_denied_error_log in caplog.text
 
 
-def test_user_permission_denied(minion_opts, caplog):
+def test_user_permission_denied(minion_opts, caplog, perm_denied_error_log):
     user_getent = {
         "minion": [
             {
@@ -366,7 +363,4 @@ def test_user_permission_denied(minion_opts, caplog):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_user_runner.user("minion")
                     assert not ret
-                    assert (
-                        "Unable to create directory /srv/salt/minion.  "
-                        "Check that the salt user has the correct permissions."
-                    ) in caplog.text
+                    assert perm_denied_error_log in caplog.text

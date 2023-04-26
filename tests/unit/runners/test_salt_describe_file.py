@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
+import sys
 from pathlib import PosixPath
 from pathlib import WindowsPath
 from unittest.mock import MagicMock
@@ -70,7 +71,14 @@ def test_file(tmp_path):
                     open_mock().write.assert_called_with("contents of testfile")
 
 
-def test_file_permissioned_denied(tmp_path, minion_opts, caplog):
+def test_file_permission_denied(tmp_path, minion_opts, caplog):
+    if sys.platform.startswith("windows"):
+        perm_denied_error_log = (
+            "Unable to create directory C:\\ProgramData\\Salt Project\\Salt\\srv\\salt\\minion"
+        )
+    else:
+        perm_denied_error_log = "Unable to create directory /srv/salt/minion"
+
     testfile = tmp_path / "testfile"
     file_sls_contents = {
         str(testfile): {
@@ -106,4 +114,4 @@ def test_file_permissioned_denied(tmp_path, minion_opts, caplog):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_file_runner.file("minion", str(testfile))
                     assert not ret
-                    assert "Unable to create directory /srv/salt/minion/files" in caplog.text
+                    assert perm_denied_error_log in caplog.text

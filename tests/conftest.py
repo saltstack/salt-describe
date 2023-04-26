@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import os
+import sys
 
 import pytest
 import salt.config
@@ -106,3 +107,19 @@ def master_opts(tmp_path):
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/master.log"
     return opts
+
+
+@pytest.fixture
+def perm_denied_error_log():
+    if sys.platform.startswith("windows"):
+        perm_denied_error_log = (
+            "Unable to create directory "
+            "C:\\ProgramData\\Salt Project\\Salt\\srv\\salt\\minion.  "
+            "Check that the salt user has the correct permissions."
+        )
+    else:
+        perm_denied_error_log = (
+            "Unable to create directory /srv/salt/minion.  "
+            "Check that the salt user has the correct permissions."
+        )
+    return perm_denied_error_log

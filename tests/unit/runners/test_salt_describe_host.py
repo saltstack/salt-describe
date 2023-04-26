@@ -66,7 +66,7 @@ def test_host():
             )
 
 
-def test_host_permissioned_denied(minion_opts, caplog):
+def test_host_permissioned_denied(minion_opts, caplog, perm_denied_error_log):
     """
     test describe.host
     """
@@ -92,7 +92,4 @@ def test_host_permissioned_denied(minion_opts, caplog):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_host_runner.host("minion")
                     assert not ret
-                    assert (
-                        "Unable to create directory /srv/salt/minion.  "
-                        "Check that the salt user has the correct permissions."
-                    ) in caplog.text
+                    assert perm_denied_error_log in caplog.text
