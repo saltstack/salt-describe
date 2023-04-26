@@ -111,7 +111,7 @@ def master_opts(tmp_path):
 
 @pytest.fixture
 def perm_denied_error_log():
-    if sys.platform.startswith("windows"):
+    if sys.platform.startswith("win32"):
         perm_denied_error_log = (
             "Unable to create directory "
             "C:\\ProgramData\\Salt Project\\Salt\\srv\\salt\\minion.  "
