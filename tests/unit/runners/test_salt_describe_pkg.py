@@ -203,7 +203,7 @@ end
 def test_pkg_ansible_permission_denied(minion_opts, caplog):
     if sys.platform.startswith("win32"):
         perm_denied_error_log = (
-            "Unable to create directory C:\\ProgramData\\Salt Project\\Salt\\srv\\ansible\\minion.  "
+            "Unable to create directory \\srv\\ansible\\minion.  "
             "Check that the salt user has the correct permissions."
         )
     else:
@@ -241,7 +241,7 @@ def test_pkg_ansible_permission_denied(minion_opts, caplog):
 def test_pkg_chef_permission_denied(minion_opts, caplog):
     if sys.platform.startswith("win32"):
         perm_denied_error_log = (
-            "Unable to create directory C:\\ProgramData\\Salt Project\\Salt\\srv\\chef\\minion.  "
+            "Unable to create directory \\srv\\chef\\minion.  "
             "Check that the salt user has the correct permissions."
         )
     else:
