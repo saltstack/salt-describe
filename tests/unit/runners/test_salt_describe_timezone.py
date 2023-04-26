@@ -46,7 +46,7 @@ def test_timezone():
             )
 
 
-def test_timezone_permission_denied(minion_opts, caplog):
+def test_timezone_permission_denied(minion_opts, caplog, perm_denied_error_log):
     """
     test describe.timezone
     """
@@ -66,7 +66,4 @@ def test_timezone_permission_denied(minion_opts, caplog):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_timezone_runner.timezone("minion")
                     assert not ret
-                    assert (
-                        "Unable to create directory /srv/salt/minion.  "
-                        "Check that the salt user has the correct permissions."
-                    ) in caplog.text
+                    assert perm_denied_error_log in caplog.text

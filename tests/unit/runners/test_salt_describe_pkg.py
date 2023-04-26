@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
+import sys
 from pathlib import PosixPath
 from pathlib import WindowsPath
 from unittest.mock import MagicMock
@@ -203,6 +204,17 @@ end
 
 
 def test_pkg_ansible_permission_denied(minion_opts, caplog):
+    if sys.platform.startswith("windows"):
+        perm_denied_error_log = (
+            "Unable to create directory C:\\ProgramData\\Salt Project\\Salt\\srv\\ansible\\minion.  "
+            "Check that the salt user has the correct permissions."
+        )
+    else:
+        perm_denied_error_log = (
+            "Unable to create directory /srv/ansible/minion.  "
+            "Check that the salt user has the correct permissions."
+        )
+
     pkg_list = {
         "minion": {
             "pkg1": "0.1.2-3",
@@ -226,13 +238,21 @@ def test_pkg_ansible_permission_denied(minion_opts, caplog):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_pkg_runner.pkg("minion", config_system="ansible")
                     assert not ret
-                    assert (
-                        "Unable to create directory /srv/ansible/minion.  "
-                        "Check that the salt user has the correct permissions."
-                    ) in caplog.text
+                    assert perm_denied_error_log in caplog.text
 
 
 def test_pkg_chef_permission_denied(minion_opts, caplog):
+    if sys.platform.startswith("windows"):
+        perm_denied_error_log = (
+            "Unable to create directory C:\\ProgramData\\Salt Project\\Salt\\srv\\chef\\minion.  "
+            "Check that the salt user has the correct permissions."
+        )
+    else:
+        perm_denied_error_log = (
+            "Unable to create directory /srv/chef/minion.  "
+            "Check that the salt user has the correct permissions."
+        )
+
     pkg_list = {
         "minion": {
             "pkg1": "0.1.2-3",
@@ -256,7 +276,4 @@ def test_pkg_chef_permission_denied(minion_opts, caplog):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_pkg_runner.pkg("minion", config_system="chef")
                     assert not ret
-                    assert (
-                        "Unable to create directory /srv/chef/minion.  "
-                        "Check that the salt user has the correct permissions."
-                    ) in caplog.text
+                    assert perm_denied_error_log in caplog.text

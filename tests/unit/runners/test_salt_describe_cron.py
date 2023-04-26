@@ -202,7 +202,7 @@ def test_cron_crontab_unavailable(tmp_path):
             assert not salt_describe_cron_runner.cron("minion", user)
 
 
-def test_cron_permissioned_denied(minion_opts, caplog, cron_ret):
+def test_cron_permissioned_denied(minion_opts, caplog, cron_ret, perm_denied_error_log):
     with patch.dict(
         salt_describe_cron_runner.__salt__, {"salt.execute": MagicMock(return_value=cron_ret)}
     ):
@@ -213,10 +213,7 @@ def test_cron_permissioned_denied(minion_opts, caplog, cron_ret):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_cron_runner.cron("minion")
                     assert not ret
-                    assert (
-                        "Unable to create directory /srv/salt/minion.  "
-                        "Check that the salt user has the correct permissions."
-                    ) in caplog.text
+                    assert perm_denied_error_log in caplog.text
 
 
 # pylint: enable=line-too-long

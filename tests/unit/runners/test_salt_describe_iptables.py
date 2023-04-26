@@ -101,7 +101,7 @@ def test_iptables(tmp_path):
             )
 
 
-def test_iptables_permission_denied(tmp_path, caplog, minion_opts):
+def test_iptables_permission_denied(tmp_path, caplog, minion_opts, perm_denied_error_log):
     """
     test describe.iptables
     """
@@ -153,7 +153,4 @@ def test_iptables_permission_denied(tmp_path, caplog, minion_opts):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_iptables_runner.iptables("minion")
                     assert not ret
-                    assert (
-                        "Unable to create directory /srv/salt/minion.  "
-                        "Check that the salt user has the correct permissions."
-                    ) in caplog.text
+                    assert perm_denied_error_log in caplog.text

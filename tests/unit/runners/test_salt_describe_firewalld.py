@@ -87,7 +87,7 @@ def test_firewalld_unavailable():
             ret = salt_describe_firewalld_runner.firewalld("minion")
 
 
-def test_firewalld_permissioned_denied(minion_opts, caplog, firewalld_ret):
+def test_firewalld_permissioned_denied(minion_opts, caplog, firewalld_ret, perm_denied_error_log):
     with patch.dict(
         salt_describe_firewalld_runner.__salt__,
         {"salt.execute": MagicMock(return_value=firewalld_ret)},
@@ -99,7 +99,4 @@ def test_firewalld_permissioned_denied(minion_opts, caplog, firewalld_ret):
                 with caplog.at_level(logging.WARNING):
                     ret = salt_describe_firewalld_runner.firewalld("minion")
                     assert not ret
-                    assert (
-                        "Unable to create directory /srv/salt/minion.  "
-                        "Check that the salt user has the correct permissions."
-                    ) in caplog.text
+                    assert perm_denied_error_log in caplog.text
