@@ -94,7 +94,8 @@ def test_service_ansible():
     if sys.platform.startswith("darwin"):
         enabled_retval = ["com.saltstack.salt.master", "com.saltstack.salt.minion"]
 
-        list_retval = "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
+        service_status_list_func = "service.list"
+        service_status_list_retval = "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
 
         service_yml_contents = [
             {
@@ -121,7 +122,6 @@ def test_service_ansible():
             }
         ]
 
-        status_retval = {}
         disabled_retval = "'service.get_disabled' is not available."
     else:
         enabled_retval = ["salt-master", "salt-api"]
@@ -147,7 +147,8 @@ def test_service_ansible():
             }
         ]
 
-        status_retval = {
+        service_status_list_func = "service.status"
+        service_status_list_retval = {
             "salt-master": True,
             "salt-minion": True,
             "salt-api": False,
@@ -167,7 +168,7 @@ def test_service_ansible():
         {"service.get_disabled": MagicMock(return_value=disabled_retval)},
     ), patch.dict(
         salt_describe_service_module.__salt__,
-        {"service.status": MagicMock(return_value=status_retval)},
+        {service_status_list_func: MagicMock(return_value=service_status_list_retval)},
     ):
         with patch.object(salt_describe_service_module, "generate_files") as generate_mock:
             assert "Generated SLS file locations" in (
@@ -183,7 +184,8 @@ def test_service_chef():
     if sys.platform.startswith("darwin"):
         enabled_retval = ["com.saltstack.salt.master", "com.saltstack.salt.minion"]
 
-        list_retval = "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
+        service_status_list_func = "service.list"
+        service_status_list_retval = "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
 
         service_rb_contents = """service 'com.saltstack.salt.minion' do
   action [ :enable, :start ]
@@ -194,14 +196,14 @@ service 'com.saltstack.salt.master' do
 end
 """
 
-        status_retval = {}
         disabled_retval = "'service.get_disabled' is not available."
 
     else:
 
         enabled_retval = ["salt-master", "salt-api"]
         disabled_retval = ["salt-minion"]
-        status_retval = {
+        service_status_list_func = "service.status"
+        service_status_list_retval = {
             "salt-master": True,
             "salt-minion": True,
             "salt-api": False,
@@ -233,7 +235,7 @@ end
         {"service.get_disabled": MagicMock(return_value=disabled_retval)},
     ), patch.dict(
         salt_describe_service_module.__salt__,
-        {"service.status": MagicMock(return_value=status_retval)},
+        {service_status_list_func: MagicMock(return_value=service_status_list_retval)},
     ):
         with patch.object(salt_describe_service_module, "generate_files") as generate_mock:
             assert "Generated SLS file locations" in salt_describe_service_module.service(
@@ -249,7 +251,8 @@ def test_service_permission_denied(minion_opts, caplog, perm_denied_error_log):
     if sys.platform.startswith("darwin"):
         enabled_retval = ["com.saltstack.salt.master", "com.saltstack.salt.minion"]
 
-        list_retval = "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
+        service_status_list_func = "service.list"
+        service_status_list_retval = "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
 
         status_retval = {}
         disabled_retval = "'service.get_disabled' is not available."
@@ -257,7 +260,8 @@ def test_service_permission_denied(minion_opts, caplog, perm_denied_error_log):
     else:
         enabled_retval = ["salt-master", "salt-api"]
 
-        status_retval = {
+        service_status_list_func = "service.status"
+        service_status_list_retval = {
             "salt-master": True,
             "salt-minion": True,
             "salt-api": False,
@@ -273,7 +277,7 @@ def test_service_permission_denied(minion_opts, caplog, perm_denied_error_log):
         {"service.get_disabled": MagicMock(return_value=disabled_retval)},
     ), patch.dict(
         salt_describe_service_module.__salt__,
-        {"service.status": MagicMock(return_value=status_retval)},
+        {service_status_list_func: MagicMock(return_value=service_status_list_retval)},
     ):
         with patch.dict(salt_describe_service_module.__opts__, minion_opts):
             with patch.object(PosixPath, "mkdir", side_effect=PermissionError), patch.object(
