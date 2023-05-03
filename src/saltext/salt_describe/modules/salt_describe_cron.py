@@ -25,7 +25,7 @@ def __virtual__():
     return __virtualname__
 
 
-def cron(tgt, user="root", include_pre=True, tgt_type="glob", config_system="salt"):
+def cron(user="root", include_pre=True, config_system="salt"):
     """
     Generate the state file for a user's cron data
 
@@ -37,14 +37,11 @@ def cron(tgt, user="root", include_pre=True, tgt_type="glob", config_system="sal
     """
     mod_name = sys._getframe().f_code.co_name
     log.info("Attempting to generate SLS file for %s", mod_name)
-    cron_contents = __salt__["salt.execute"](
-        tgt,
-        "cron.ls",
-        arg=[user],
-        tgt_type=tgt_type,
-    )
+    minion_id = __salt__["config.get"]("id")
+    cron_contents = {minion_id: __salt__["cron.ls"](arg=[user])}
+
     sls_files = []
-    if not parse_salt_ret(ret=cron_contents, tgt=tgt):
+    if not parse_salt_ret(ret=cron_contents, tgt=minion_id):
         return ret_info(sls_files, mod=mod_name)
     for minion in list(cron_contents.keys()):
         minion_crons = cron_contents[minion]
