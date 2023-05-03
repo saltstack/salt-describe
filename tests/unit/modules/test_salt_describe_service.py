@@ -41,6 +41,7 @@ def test_service():
             },
         }
 
+        status_retval = {}
         disabled_retval = "'service.get_disabled' is not available."
     else:
         enabled_retval = ["salt-master", "salt-api"]
@@ -119,6 +120,7 @@ def test_service_ansible():
             }
         ]
 
+        status_retval = {}
         disabled_retval = "'service.get_disabled' is not available."
     else:
         enabled_retval = ["salt-master", "salt-api"]
@@ -191,6 +193,7 @@ service 'com.saltstack.salt.master' do
 end
 """
 
+        status_retval = {}
         disabled_retval = "'service.get_disabled' is not available."
 
     else:
@@ -247,6 +250,7 @@ def test_service_permission_denied(minion_opts, caplog, perm_denied_error_log):
 
         list_retval = "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
 
+        status_retval = {}
         disabled_retval = "'service.get_disabled' is not available."
 
     else:
