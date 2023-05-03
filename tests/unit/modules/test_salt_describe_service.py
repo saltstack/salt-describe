@@ -30,7 +30,8 @@ def test_service():
     if sys.platform.startswith("darwin"):
         enabled_retval = ["com.saltstack.salt.master", "com.saltstack.salt.minion"]
 
-        list_retval = "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
+        service_status_list_func = "service.list"
+        service_status_list_retval = "PID\tStatus\tLabel\n358\t0\tcom.saltstack.salt.minion\n359\t0\tcom.saltstack.salt.master\n"
 
         service_sls_contents = {
             "com.saltstack.salt.master": {
@@ -41,7 +42,6 @@ def test_service():
             },
         }
 
-        status_retval = {}
         disabled_retval = "'service.get_disabled' is not available."
     else:
         enabled_retval = ["salt-master", "salt-api"]
@@ -61,7 +61,8 @@ def test_service():
             },
         }
 
-        status_retval = {
+        service_status_list_func = "service.status"
+        service_status_list_retval = {
             "salt-master": True,
             "salt-minion": True,
             "salt-api": False,
@@ -79,7 +80,7 @@ def test_service():
         {"service.get_disabled": MagicMock(return_value=disabled_retval)},
     ), patch.dict(
         salt_describe_service_module.__salt__,
-        {"service.status": MagicMock(return_value=status_retval)},
+        {service_status_list_func: MagicMock(return_value=service_status_list_retval)},
     ):
         with patch.object(salt_describe_service_module, "generate_files") as generate_mock:
             assert "Generated SLS file locations" in salt_describe_service_module.service()
