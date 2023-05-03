@@ -26,7 +26,7 @@ def __virtual__():
     return __virtualname__
 
 
-def pip(tgt, tgt_type="glob", bin_env=None, config_system="salt", **kwargs):
+def pip(bin_env=None, config_system="salt", **kwargs):
     """
     Gather installed pip libraries and build a state file.
 
@@ -39,13 +39,9 @@ def pip(tgt, tgt_type="glob", bin_env=None, config_system="salt", **kwargs):
     """
     mod_name = sys._getframe().f_code.co_name
     log.info("Attempting to generate SLS file for %s", mod_name)
-    ret = __salt__["salt.execute"](
-        tgt,
-        "pip.freeze",
-        tgt_type=tgt_type,
-        bin_env=bin_env,
-    )
-    if not parse_salt_ret(ret=ret, tgt=tgt):
+    minion_id = __salt__["config.get"]("id")
+    ret = {minion_id: __salt__["pip.freeze"](bin_env=bin_env)}
+    if not parse_salt_ret(ret=ret, tgt=minion_id):
         return ret_info(sls_files, mod=mod_name)
 
     sls_files = []
