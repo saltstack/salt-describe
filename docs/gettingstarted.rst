@@ -61,11 +61,24 @@ If you are using onedir Salt packages, you need to run the following:
 
    # salt-pip install saltext.salt-describe
 
-If you are using the Salt pip packages, you need to run the following:
+If you are using the Salt pip packages or classic packages, you need to run the following:
 
 .. code-block:: bash
 
-   # pip install saltext.salt-describe
+   # pip3 install saltext.salt-describe
+
+.. note::
+
+   Your pip binary, may be refered to as something
+   else such as ``pip`` or ``pip3.10`` for example.
+
+You can also use the ``pip`` Salt execution module which will be able to detect if you
+are using the Salt onedir packages or not and install the dependency in
+the correct location:
+
+.. code-block:: bash
+
+   # salt-run salt.cmd pip.install saltext.salt_describe
 
 
 How to use Salt describe
