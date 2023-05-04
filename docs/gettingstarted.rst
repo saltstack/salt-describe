@@ -72,7 +72,7 @@ How to use Salt describe
 ========================
 
 Now you are ready to start using Salt describe, and auto generating your SLS files for all
-of the systems you want to manage. Salt describe is a Salt runner, so you need to use the cli
+of the systems you want to manage. Using the Salt describe Salt runner, you can use the cli
 tool ``salt-run`` to interact with the extension. The command looks like the following:
 
 
@@ -150,3 +150,21 @@ and also install the new php packages:
     ------------
     Total states run:     1
     Total run time:   2.301 s
+
+
+Salt describe is also available as a Salt execution module, which can be run directly on a Salt minion.
+The generated state files will be created on the Salt minion, this is useful for those users who might be
+running a master-less setup.
+
+.. code-block:: bash
+
+   # salt-call describe.<module> <minion>
+
+So for example, and you want to auto generate the
+``pkg.installed`` stated you would need to run the following:
+
+.. code-block:: bash
+
+   # salt-call describe.pkg
+   Generated SLS file locations:
+       - /srv/salt/poc-minion/pkg.sls
