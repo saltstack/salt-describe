@@ -3,7 +3,7 @@
 """
 Module for building state file
 
-.. versionadded:: 3006
+.. versionadded:: 1.0
 
 """
 import logging
