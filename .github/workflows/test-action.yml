@@ -149,6 +149,12 @@ jobs:
             salt-version: 3004.2
           - python-version: 3.8
             salt-version: 3005.1
+          - python-version: 3.8
+            salt-version: 3006.1
+          - python-version: 3.9
+            salt-version: 3006.1
+          - python-version: 3.10
+            salt-version: 3006.1
 
     steps:
     - uses: actions/checkout@v2
@@ -177,10 +183,16 @@ jobs:
       shell: bash
       env:
         SALT_REQUIREMENT: salt==${{ matrix.salt-version }}
-        # EXTRA_REQUIREMENTS_INSTALL: Cython
       run: |
         export PATH="/C/Program Files (x86)/Windows Kits/10/bin/10.0.18362.0/x64;$PATH"
-        nox --force-color -e tests-3 --install-only
+        nox --force-color --envdir 'C:\.nox' -e tests-3 --install-only
+
+
+    - name: Patch salt/utils/win_network.py
+      shell: bash
+      if: ${{ startswith(matrix.salt-version, '3006') }}
+      run: |
+          patch 'C:\.nox\tests-3\lib\site-packages\salt\utils\win_network.py' ./.github/patches/win_network.patch
 
     - name: Test
       shell: bash
@@ -189,7 +201,7 @@ jobs:
         SKIP_REQUIREMENTS_INSTALL: YES
       run: |
         export PATH="/C/Program Files (x86)/Windows Kits/10/bin/10.0.18362.0/x64;$PATH"
-        nox --force-color -e tests-3 -- -vv tests/
+        nox --force-color --envdir 'C:\.nox' -e tests-3 -- -vv tests/
 
     - name: Create CodeCov Flags
       if: always()

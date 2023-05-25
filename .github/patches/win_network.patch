@@ -1,0 +1,10 @@
+diff --git a/salt/utils/win_network.py b/salt/utils/win_network.py
+index 702f29702f..ad69d20745 100644
+--- a/salt/utils/win_network.py
++++ b/salt/utils/win_network.py
+@@ -312,7 +312,6 @@ def _get_ip_wins_info(i_face):
+
+
+ def _get_network_interfaces():
+-    clr.AddReference("System.Net")
+     return NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
