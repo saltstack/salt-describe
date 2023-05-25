@@ -145,16 +145,16 @@ jobs:
       max-parallel: 3
       matrix:
         include:
-          - python-version: 3.8
-            salt-version: 3004.2
-          - python-version: 3.8
-            salt-version: 3005.1
-          - python-version: 3.8
-            salt-version: 3006.1
-          - python-version: 3.9
-            salt-version: 3006.1
-          - python-version: 3.10
-            salt-version: 3006.1
+          - python-version: "3.8"
+            salt-version: "3004.2"
+          - python-version: "3.8"
+            salt-version: "3005.1"
+          - python-version: "3.8"
+            salt-version: "3006.1"
+          - python-version: "3.9"
+            salt-version: "3006.1"
+          - python-version: "3.10"
+            salt-version: "3006.1"
 
     steps:
     - uses: actions/checkout@v2
