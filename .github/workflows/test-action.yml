@@ -180,13 +180,6 @@ jobs:
         export PATH="/C/Program Files (x86)/Windows Kits/10/bin/10.0.18362.0/x64;$PATH"
         nox --force-color --envdir 'C:\.nox' -e tests-3 --install-only
 
-
-    - name: Patch salt/utils/win_network.py
-      shell: bash
-      if: ${{ startswith(matrix.salt-version, '3006') }}
-      run: |
-          patch 'C:\.nox\tests-3\lib\site-packages\salt\utils\win_network.py' ./.github/patches/win_network.patch
-
     - name: Test
       shell: bash
       env:
