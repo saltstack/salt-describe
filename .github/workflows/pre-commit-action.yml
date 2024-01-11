@@ -13,7 +13,7 @@ jobs:
     name: Pre-Commit
     runs-on: ubuntu-latest
     container:
-      image: python:3.8.6-slim-bullseye
+      image: python:3.9.18-slim-bullseye
 
     steps:
       - name: Install System Deps
