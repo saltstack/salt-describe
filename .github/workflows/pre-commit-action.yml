@@ -25,8 +25,12 @@ jobs:
 
       - uses: actions/checkout@v3
 
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1
+      - name: Pre-Checks
+        run: |
+         pwd
+         ls
+         which git
+         git status
 
       - name: Install Pre-Commit
         run: |
