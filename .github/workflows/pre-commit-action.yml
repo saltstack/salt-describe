@@ -28,7 +28,7 @@ jobs:
       - name: Pre-Checks
         run: |
          pwd
-         ls
+         ls -ld .
          which git
          git status
 
