@@ -30,6 +30,7 @@ jobs:
          pwd
          ls -ld .
          which git
+         whoami
          git status
 
       - name: Install Pre-Commit
