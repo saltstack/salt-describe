@@ -31,13 +31,11 @@ def test_ssh_user_keys():
         "user": {
             "AAA": {
                 "enc": "ssh-rsa",
-                "comment": "/home/user/.ssh/id_rsa",
                 "options": [],
                 "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
             },
             "AAAAC": {
                 "enc": "ssh-ed25519",
-                "comment": "ed25519-key",
                 "options": [],
                 "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
             },
@@ -49,14 +47,92 @@ def test_ssh_user_keys():
             "ssh_auth.present": [
                 {"user": "user"},
                 {"enc": "ssh-rsa"},
-                {"comment": "/home/user/.ssh/id_rsa"},
             ]
         },
         "AAAAC": {
             "ssh_auth.present": [
                 {"user": "user"},
                 {"enc": "ssh-ed25519"},
-                {"comment": "ed25519-key"},
+            ]
+        },
+    }
+
+    ssh_known_hosts_sls = yaml.dump(ssh_known_hosts_sls_contents)
+
+    with patch.dict(
+        salt_describe_ssh_known_hosts_module.__salt__,
+        {"ssh.auth_keys": MagicMock(return_value=ssh_known_hosts)},
+    ):
+        with patch.object(salt_describe_ssh_known_hosts_module, "generate_files") as generate_mock:
+            ret = salt_describe_ssh_known_hosts_module.ssh_known_hosts()
+            assert (
+                "Generated SLS file locations"
+                in salt_describe_ssh_known_hosts_module.ssh_known_hosts()
+            )
+            generate_mock.assert_called_with(
+                {}, "minion", ssh_known_hosts_sls, sls_name="ssh_known_hosts", config_system="salt"
+            )
+
+
+def test_ssh_user_keys_comment():
+    ssh_known_hosts = {
+        "user": {
+            "AAA": {
+                "enc": "ssh-rsa",
+                "comment": "/home/user/.ssh/id_rsa",
+                "options": ['option1="value1"', 'option2="value2 flag2"'],
+                "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
+            },
+        }
+    }
+
+    ssh_known_hosts_sls_contents = {
+        "AAA": {
+            "ssh_auth.present": [
+                {"user": "user"},
+                {"enc": "ssh-rsa"},
+                {"options": ['option1="value1"', 'option2="value2 flag2"']},
+                {"comment": "/home/user/.ssh/id_rsa"},
+            ]
+        },
+    }
+
+    ssh_known_hosts_sls = yaml.dump(ssh_known_hosts_sls_contents)
+
+    with patch.dict(
+        salt_describe_ssh_known_hosts_module.__salt__,
+        {"ssh.auth_keys": MagicMock(return_value=ssh_known_hosts)},
+    ):
+        with patch.object(salt_describe_ssh_known_hosts_module, "generate_files") as generate_mock:
+            ret = salt_describe_ssh_known_hosts_module.ssh_known_hosts()
+            assert (
+                "Generated SLS file locations"
+                in salt_describe_ssh_known_hosts_module.ssh_known_hosts()
+            )
+            generate_mock.assert_called_with(
+                {}, "minion", ssh_known_hosts_sls, sls_name="ssh_known_hosts", config_system="salt"
+            )
+
+
+def test_ssh_user_keys_options():
+    ssh_known_hosts = {
+        "user": {
+            "AAA": {
+                "enc": "ssh-rsa",
+                "comment": "/home/user/.ssh/id_rsa",
+                "options": ['option1="value1"', 'option2="value2 flag2"'],
+                "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
+            },
+        }
+    }
+
+    ssh_known_hosts_sls_contents = {
+        "AAA": {
+            "ssh_auth.present": [
+                {"user": "user"},
+                {"enc": "ssh-rsa"},
+                {"options": ['option1="value1"', 'option2="value2 flag2"']},
+                {"comment": "/home/user/.ssh/id_rsa"},
             ]
         },
     }

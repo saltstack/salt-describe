@@ -29,14 +29,6 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Pre-Checks
-        run: |
-         pwd
-         ls -ld .
-         which git
-         whoami
-         git status
-
       - name: Install Pre-Commit
         run: |
           python -m pip install --upgrade pip
