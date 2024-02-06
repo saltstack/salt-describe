@@ -26,6 +26,11 @@ def configure_loader_modules():
     }
 
 
+def test_ssh_virtual():
+    ret = salt_describe_ssh_known_hosts_module.__virtual__()
+    assert ret == "describe"
+
+
 def test_ssh_user_keys():
     ssh_known_hosts = {
         "user": {
@@ -184,3 +189,33 @@ def test_ssh_known_hosts_permission_denied(caplog, minion_opts, perm_denied_erro
                     ret = salt_describe_ssh_known_hosts_module.ssh_known_hosts()
                     assert not ret
                     assert perm_denied_error_log in caplog.text
+
+
+def test_ssh_known_hosts_parse_salt_ret_false(minion_opts):
+    ssh_known_hosts = {
+        "user": {
+            "AAA": {
+                "enc": "ssh-rsa",
+                "comment": "/home/user/.ssh/id_rsa",
+                "options": [],
+                "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
+            },
+            "AAAAC": {
+                "enc": "ssh-ed25519",
+                "comment": "ed25519-key",
+                "options": [],
+                "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
+            },
+        }
+    }
+
+    with patch.object(
+        salt_describe_ssh_known_hosts_module, "parse_salt_ret"
+    ) as parse_salt_ret_mock:
+        parse_salt_ret_mock.return_value = False
+        with patch.dict(
+            salt_describe_ssh_known_hosts_module.__salt__,
+            {"ssh.auth_keys": MagicMock(return_value=ssh_known_hosts)},
+        ):
+            ret = salt_describe_ssh_known_hosts_module.ssh_known_hosts()
+            assert not ret
