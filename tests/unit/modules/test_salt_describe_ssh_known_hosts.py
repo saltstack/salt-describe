@@ -219,3 +219,138 @@ def test_ssh_known_hosts_parse_salt_ret_false(minion_opts):
         ):
             ret = salt_describe_ssh_known_hosts_module.ssh_known_hosts()
             assert not ret
+
+
+def test_ssh_user_keys():
+    ssh_known_hosts = {
+        "user": {
+            "AAA": {
+                "enc": "ssh-rsa",
+                "options": [],
+                "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
+            },
+            "AAAAC": {
+                "enc": "ssh-ed25519",
+                "options": [],
+                "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
+            },
+        }
+    }
+
+    ssh_known_hosts_sls_contents = {
+        "AAA": {
+            "ssh_auth.present": [
+                {"user": "user"},
+                {"enc": "ssh-rsa"},
+            ]
+        },
+        "AAAAC": {
+            "ssh_auth.present": [
+                {"user": "user"},
+                {"enc": "ssh-ed25519"},
+            ]
+        },
+    }
+
+    ssh_known_hosts_sls = yaml.dump(ssh_known_hosts_sls_contents)
+
+    with patch.dict(
+        salt_describe_ssh_known_hosts_module.__salt__,
+        {"ssh.auth_keys": MagicMock(return_value=ssh_known_hosts)},
+    ):
+        with patch.object(salt_describe_ssh_known_hosts_module, "generate_files") as generate_mock:
+            ret = salt_describe_ssh_known_hosts_module.ssh_known_hosts()
+            assert (
+                "Generated SLS file locations"
+                in salt_describe_ssh_known_hosts_module.ssh_known_hosts()
+            )
+            generate_mock.assert_called_with(
+                {}, "minion", ssh_known_hosts_sls, sls_name="ssh_known_hosts", config_system="salt"
+            )
+
+
+def test_ssh_user_keys_chef():
+    ssh_known_hosts = {
+        "user": {
+            "AAA": {
+                "enc": "ssh-rsa",
+                "options": [],
+                "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
+            },
+            "AAAAC": {
+                "enc": "ssh-ed25519",
+                "options": [],
+                "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
+            },
+        }
+    }
+
+    ssh_known_hosts_rb_contents = """depends 'ssh_authorized_keys'
+ssh_authorize_key 'user' do
+  key 'AAA'
+  user 'user'
+end
+
+ssh_authorize_key 'user' do
+  key 'AAAAC'
+  user 'user'
+end
+"""
+
+    with patch.dict(
+        salt_describe_ssh_known_hosts_module.__salt__,
+        {"ssh.auth_keys": MagicMock(return_value=ssh_known_hosts)},
+    ):
+        with patch.object(salt_describe_ssh_known_hosts_module, "generate_files") as generate_mock:
+            assert (
+                "Generated SLS file locations"
+                in salt_describe_ssh_known_hosts_module.ssh_known_hosts(config_system="chef")
+            )
+            generate_mock.assert_called_with(
+                {},
+                "minion",
+                ssh_known_hosts_rb_contents,
+                sls_name="ssh_known_hosts",
+                config_system="chef",
+            )
+
+
+def test_ssh_user_keys_options_chef():
+    ssh_known_hosts = {
+        "user": {
+            "AAA": {
+                "enc": "ssh-rsa",
+                "comment": "/home/user/.ssh/id_rsa",
+                "options": ["option1=value1", "option2=value2 flag2"],
+                "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
+            },
+        }
+    }
+
+    ssh_known_hosts_rb_contents = """depends 'ssh_authorized_keys'
+ssh_authorize_key 'user' do
+  key 'AAA'
+  user 'user'
+  options(
+    'option1' => 'value1',
+    'option2' => 'value2 flag2',
+  )
+end
+"""
+
+    with patch.dict(
+        salt_describe_ssh_known_hosts_module.__salt__,
+        {"ssh.auth_keys": MagicMock(return_value=ssh_known_hosts)},
+    ):
+        with patch.object(salt_describe_ssh_known_hosts_module, "generate_files") as generate_mock:
+            assert (
+                "Generated SLS file locations"
+                in salt_describe_ssh_known_hosts_module.ssh_known_hosts(config_system="chef")
+            )
+            generate_mock.assert_called_with(
+                {},
+                "minion",
+                ssh_known_hosts_rb_contents,
+                sls_name="ssh_known_hosts",
+                config_system="chef",
+            )
