@@ -14,6 +14,7 @@ import yaml
 from saltext.salt_describe.utils.init import generate_files
 from saltext.salt_describe.utils.init import parse_salt_ret
 from saltext.salt_describe.utils.init import ret_info
+from saltext.salt_describe.utils.ssh_known_hosts import _parse_ansible
 from saltext.salt_describe.utils.ssh_known_hosts import _parse_chef
 from saltext.salt_describe.utils.ssh_known_hosts import _parse_salt
 

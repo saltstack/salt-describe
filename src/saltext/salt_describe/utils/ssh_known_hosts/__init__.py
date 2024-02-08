@@ -26,6 +26,40 @@ def _parse_salt(minion, user_keys, **kwargs):
     return state_contents
 
 
+def _parse_ansible(minion, user_keys, **kwargs):
+    """
+    Parse the returned service commands and return
+    ansible data.
+    """
+    data = {}
+    data = {"name": "Manage SSH Auth Keys", "tasks": []}
+    if not kwargs.get("hosts"):
+        log.error(
+            "Hosts was not passed. You will need to manually edit the playbook with the hosts entry"
+        )
+    else:
+        data["hosts"] = kwargs.get("hosts")
+    state_contents = []
+
+    for user in user_keys:
+        for key in user_keys[user]:
+            key_data = user_keys[user][key]
+
+            ssh_auth_data = {"user": user, "key": key}
+
+            if key_data.get("options"):
+                ssh_auth_data["key_options"] = ", ".join(key_data["options"])
+
+            data["tasks"].append(
+                {
+                    "name": f"Manage ssh-auth key {key}",
+                    "ansible.posix.authorized_key": ssh_auth_data,
+                }
+            )
+        state_contents.append(data)
+    return state_contents
+
+
 def _parse_chef(minion, user_keys, **kwargs):
     """
     Parse the returned service commands and return
