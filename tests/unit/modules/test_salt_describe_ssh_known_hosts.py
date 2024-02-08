@@ -354,3 +354,53 @@ end
                 sls_name="ssh_known_hosts",
                 config_system="chef",
             )
+
+
+def test_ssh_user_keys_options_ansible():
+    ssh_known_hosts = {
+        "user": {
+            "AAA": {
+                "enc": "ssh-rsa",
+                "comment": "/home/user/.ssh/id_rsa",
+                "options": ["option1='value1'", "option2='value2 flag2'"],
+                "fingerprint": "XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX",
+            },
+        }
+    }
+
+    ssh_auth_yml_contents = [
+        {
+            "name": "Manage SSH Auth Keys",
+            "tasks": [
+                {
+                    "name": "Manage ssh-auth key AAA",
+                    "ansible.posix.authorized_key": {
+                        "key": "AAA",
+                        "user": "user",
+                        "key_options": "option1='value1', option2='value2 flag2'",
+                    },
+                },
+            ],
+            "hosts": "testgroup",
+        }
+    ]
+
+    ssh_auth_yml = yaml.dump(ssh_auth_yml_contents)
+    with patch.dict(
+        salt_describe_ssh_known_hosts_module.__salt__,
+        {"ssh.auth_keys": MagicMock(return_value=ssh_known_hosts)},
+    ):
+        with patch.object(salt_describe_ssh_known_hosts_module, "generate_files") as generate_mock:
+            assert (
+                "Generated SLS file locations"
+                in salt_describe_ssh_known_hosts_module.ssh_known_hosts(
+                    config_system="ansible", hosts="testgroup"
+                )
+            )
+            generate_mock.assert_called_with(
+                {},
+                "minion",
+                ssh_auth_yml,
+                sls_name="ssh_known_hosts",
+                config_system="ansible",
+            )
